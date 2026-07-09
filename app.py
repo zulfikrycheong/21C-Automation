@@ -28,7 +28,7 @@ def get_google_sheet():
     client = gspread.authorize(creds)
     sheet = client.open(GOOGLE_SHEET_NAME).worksheet(SHEET_TAB_NAME)
     return sheet
-    ]
+    
     # This pulls directly from the secure text box you pasted into Advanced Settings!
     creds_dict = dict(st.secrets["gcs"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
