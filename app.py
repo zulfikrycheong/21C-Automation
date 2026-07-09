@@ -18,7 +18,9 @@ def get_google_sheet():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+    # This pulls directly from the secure text box you pasted into Advanced Settings!
+    creds_dict = dict(st.secrets["gcs"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
     sheet = client.open(GOOGLE_SHEET_NAME).worksheet(SHEET_TAB_NAME)
     return sheet
