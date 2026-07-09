@@ -20,9 +20,8 @@ def get_google_sheet():
     ]
     creds_dict = dict(st.secrets["gcs"])
     
-    # --- ADD THIS LINE TO FIX THE PEM FILE ERROR ---
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-    # -----------------------------------------------
+    # Just clean up any trailing whitespace from the triple-quote format
+    creds_dict["private_key"] = creds_dict["private_key"].strip()
     
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
