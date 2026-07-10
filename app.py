@@ -282,5 +282,11 @@ if uploaded_files:
                     
             st.balloons()
 
+        # --- THE AUTOMATIC RESET TRICK ---
+            # Automatically increments the uploader widget key so it clears out the files for the next batch run!
+            st.session_state["uploader_key"] += 1
+            st.session_state["previous_files"] = []
+            st.rerun()
+        
         except Exception as e:
             st.error(f"Error executing automation batch processing: {e}")
