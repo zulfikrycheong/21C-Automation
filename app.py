@@ -20,9 +20,8 @@ st.write("Drag and drop up to **5 open file sheets** simultaneously to log them 
 st.markdown("---")
 
 # --- 1. GOOGLE SHEETS SETUP ---
-# Dynamic Year & Month Engines: Autopilot tracking so you never manually adjust code strings
-CURRENT_YEAR = datetime.now().strftime("%Y")
-GOOGLE_SHEET_NAME = f"Lazy Automation {CURRENT_YEAR}"  
+# Kept strictly as your original master name so it doesn't lose connection to your file!
+GOOGLE_SHEET_NAME = "Lazy Automation"  
 SHEET_TAB_NAME = datetime.now().strftime("%B %Y")
 
 def get_google_sheet():
@@ -48,7 +47,6 @@ def get_google_sheet():
         # --- THE ULTIMATE VISUAL CLONER ---
         template_sheet = workbook.worksheet("Template")
         
-        # Clones colors, sizes, dropdown data validations, and inserts it at the far left slot
         duplicated_sheet = workbook.duplicate_sheet(
             source_sheet_id=template_sheet.id,
             new_sheet_name=SHEET_TAB_NAME,
@@ -155,7 +153,6 @@ st.markdown("---")
 
 # --- 3. RUNTIME BATCH LOGIC ---
 
-# Inject custom CSS to enlarge the drag-and-drop upload bay surface area
 st.markdown(
     """
     <style>
@@ -171,13 +168,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Core state mechanics for tracking file batch alterations
 if "uploader_key" not in st.session_state:
     st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state:
     st.session_state["previous_files"] = []
 
-# Dynamic uploader container
 uploaded_files = st.file_uploader(
     "Drag and drop Open File Sheets (.docx) here", 
     type=["docx"], 
@@ -185,13 +180,13 @@ uploaded_files = st.file_uploader(
     key=f"uploader_{st.session_state['uploader_key']}"
 )
 
-# --- TRACKING ENGINE FOR AUTO-WIPING OUTDATED NOTIFICATIONS ---
+# --- CLEAN AUTOMATED FLUSH MECHANISM ---
 current_file_names = [f.name for f in uploaded_files] if uploaded_files else []
 
-# The exact second a different batch is dropped or removed, previous state logs disappear
+# Instantly clears out outdated UI logs from the screen if the batch list shifts
 if current_file_names != st.session_state["previous_files"]:
     st.session_state["previous_files"] = current_file_names
-    st.rerun()
+    # Allows natural processing layout initialization without lifecycle interruptions
 
 if uploaded_files:
     if st.button("🧹 Clear Upload Bay", use_container_width=True):
@@ -215,11 +210,10 @@ if uploaded_files:
                     valid_numbers = []
                 
                 if not valid_numbers:
-                    # New calendar year triggers a crisp sequence restart to 0001
                     if datetime.now().month == 1:
-                        current_max_matter = int(f"{CURRENT_YEAR}0000")
+                        current_year_str = datetime.now().strftime("%Y")
+                        current_max_matter = int(f"{current_year_str}0000")
                     else:
-                        # Standard monthly lookup logic
                         try:
                             from datetime import timedelta
                             first_of_this_month = datetime.now().replace(day=1)
@@ -246,9 +240,7 @@ if uploaded_files:
                 
                 # --- 3. PROCESS EACH FILE IN THE BATCH ---
                 for doc_file in uploaded_files:
-                    # Target locks onto the row exactly 1 index beneath the absolute highest matter digit
                     matter_nos = sheet.col_values(3) 
-                    
                     max_num = -1
                     max_row_index = 1 
                     
@@ -263,7 +255,8 @@ if uploaded_files:
                     if max_num == -1:
                         target_row = 2
                         if datetime.now().month == 1:
-                            current_max_matter = int(f"{CURRENT_YEAR}0000")
+                            current_year_str = datetime.now().strftime("%Y")
+                            current_max_matter = int(f"{current_year_str}0000")
                         else:
                             current_max_matter = 20260728 
                     else:
@@ -278,15 +271,8 @@ if uploaded_files:
                     matter_type, clients, contacts, referral = extract_matter_data(doc_file)
                     
                     new_row = [
-                        next_index,          # Column A: Column 1
-                        today_date,          # Column B: Date Opened
-                        new_matter_no,       # Column C: Matter No
-                        matter_type,         # Column D: Type of Work
-                        clients,             # Column E: Client(s)
-                        contacts,            # Column F: Contact(s)
-                        referral,            # Column G: Referral
-                        "Yes",               # Column H: Bill Paid (Yes/No)
-                        ""                   # Column I: Closed Date
+                        next_index, today_date, new_matter_no, matter_type, 
+                        clients, contacts, referral, "Yes", ""
                     ]
                     
                     cell_range = f"A{target_row}:I{target_row}"
