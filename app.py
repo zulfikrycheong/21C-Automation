@@ -46,11 +46,11 @@ def get_google_sheet():
         sheet = workbook.worksheet(SHEET_TAB_NAME)
     except gspread.exceptions.WorksheetNotFound:
         # --- THE ULTIMATE VISUAL CLONER ---
-        # Fetch the perfectly styled master template tab you created
+        # Fetch the existing master template tab
         template_sheet = workbook.worksheet("Template")
         
         # Duplicate the template tab exactly into the workbook
-        # This copies all dropdowns, colors, borders, and column sizes!
+        # Copies all dropdowns, colors, borders, and column sizes!
         duplicated_sheet = workbook.duplicate_sheet(
             source_sheet_id=template_sheet.id,
             new_sheet_name=SHEET_TAB_NAME,
@@ -222,7 +222,7 @@ if uploaded_files:
                     
                     matter_type, clients, contacts, referral = extract_matter_data(doc_file)
                     
-                    # The value structure matching Columns A through I perfectly
+                    # The value structure matching Columns A through I
                     new_row = [
                         next_index,          # Column A: Column 1
                         today_date,          # Column B: Date Opened
