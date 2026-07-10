@@ -22,7 +22,7 @@ st.markdown("---")
 # --- 1. GOOGLE SHEETS SETUP ---
 # Kept strictly as your original master name so it doesn't lose connection to your file!
 GOOGLE_SHEET_NAME = "Lazy Automation"  
-SHEET_TAB_NAME = datetime.now().strftime("%B %Y")
+SHEET_TAB_NAME = "August 2026"
 
 def get_google_sheet():
     scopes = [
