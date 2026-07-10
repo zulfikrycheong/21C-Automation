@@ -106,8 +106,41 @@ def extract_matter_data(doc_path):
     return matter_type, clients_field, contacts_field, referral
 
 # --- 3. RUNTIME BATCH LOGIC ---
-# Added accept_multiple_files=True to handle lists of files natively
-uploaded_files = st.file_uploader("Drag and drop Open File Sheets (.docx) here", type=["docx"], accept_multiple_files=True)
+
+# Inject custom CSS to enlarge the drag-and-drop upload bay surface area
+st.markdown(
+    """
+    <style>
+    [data-testid="stFileUploader"] {
+        padding: 20px 0px;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        padding: 50px 20px;
+        min-height: 220px;
+    }
+    </style>
+    """,
+    unsafe_html=True
+)
+
+# Initialize a session state key for the file uploader to allow manual clearing
+if "uploader_key" not in st.session_state:
+    st.session_state["uploader_key"] = 0
+
+# The expanded file uploader bay
+uploaded_files = st.file_uploader(
+    "Drag and drop Open File Sheets (.docx) here", 
+    type=["docx"], 
+    accept_multiple_files=True,
+    key=f"uploader_{st.session_state['uploader_key']}"
+)
+
+# Add a clean clear button right below the upload bay if files are present
+if uploaded_files:
+    if st.button("🧹 Clear Upload Bay", use_container_width=True):
+        # Incrementing the key forces Streamlit to completely destroy the old widget and draw a fresh, empty one
+        st.session_state["uploader_key"] += 1
+        st.rerun()
 
 if uploaded_files:
     # Strict safeguard check to enforce the 5-file cap
