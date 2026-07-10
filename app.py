@@ -243,40 +243,40 @@ if uploaded_files:
                 
                # --- 3. PROCESS EACH FILE IN THE BATCH ---
                 for doc_file in uploaded_files:
-                    # --- FIX: ALWAYS TARGET THE ABSOLUTE BOTTOM OF THE SHEET ---
-                    # Instead of looping to find gaps, grab the total length of Column B (Date Opened)
-                    # or Column A. If there are 10 rows populated, len() gives 10, so the next row is 11.
-                    populated_rows = sheet.col_values(2)  # Scans Date Opened column
-                    target_row = len(populated_rows) + 1
+                    # --- CRITICAL FIX: FIND THE ROW OF THE MAX NUMBER IN COLUMN C ---
+                    matter_nos = sheet.col_values(3)  # Read all values in Column C (Matter No)
                     
-                    # Ensure we don't accidentally try to overwrite the header row if the sheet is completely fresh
-                    if target_row < 2:
+                    # Track down the max number and its physical row index
+                    max_num = -1
+                    max_row_index = 1  # Default to header row if nothing found
+                    
+                    for idx, val in enumerate(matter_nos):
+                        clean_val = str(val).strip()
+                        if clean_val.isdigit():
+                            num = int(clean_val)
+                            if num > max_num:
+                                max_num = num
+                                max_row_index = idx + 1  # sheets are 1-indexed
+                    
+                    # The target row is strictly 1 row below the highest number found
+                    if max_num == -1:
+                        # If the sheet has no numbers at all yet, start right below header
                         target_row = 2
-                    
-                    # If Column A contains pre-printed index numbers (1, 2, 3...) in your template,
-                    # next_index will just match the physical target row minus 1.
-                    next_index = target_row - 1
-                    today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
-                    
-                    # --- Fetch the maximum number right now to prevent sequence breaks ---
-                    try:
-                        matter_nos = sheet.col_values(3)[1:]  
-                        valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
-                    except Exception:
-                        valid_numbers = []
-                        
-                    if not valid_numbers:
-                        # Fallback to the January reset or default baseline if tab is blank
                         is_january = datetime.now().month == 1
                         if is_january:
                             current_year_str = datetime.now().strftime("%Y")
-                            current_max_matter = int(f"{current_year_str}0001")
+                            current_max_matter = int(f"{current_year_str}0000")
                         else:
-                            current_max_matter = 20260729  # Your active mid-year safety fallback
+                            current_max_matter = 20260728  # Mid-year emergency baseline
                     else:
-                        current_max_matter = max(valid_numbers) + 1
-                        
+                        target_row = max_row_index + 1
+                        current_max_matter = max_num
+                    
+                    # Increment the number sequence cleanly ($n + 1$)
+                    current_max_matter += 1
                     new_matter_no = str(current_max_matter)
+                    next_index = target_row - 1
+                    today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
                     
                     matter_type, clients, contacts, referral = extract_matter_data(doc_file)
                     
