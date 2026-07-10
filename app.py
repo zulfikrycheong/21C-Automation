@@ -44,8 +44,9 @@ def get_google_sheet():
     try:
         sheet = workbook.worksheet(SHEET_TAB_NAME)
     except gspread.exceptions.WorksheetNotFound:
-        # --- THE AUTO-CANVAS GENERATOR ---
-        sheet = workbook.add_worksheet(title=SHEET_TAB_NAME, rows="1000", cols="26")
+        # --- THE AUTO-CANVAS GENERATOR (UPDATED POSITION TO MOST LEFT) ---
+        # index=0 forces the newly created monthly tab to appear at the very front/left
+        sheet = workbook.add_worksheet(title=SHEET_TAB_NAME, rows="1000", cols="26", index=0)
         
         # EXACT corporate headers from the master sheet layout
         headers = [
@@ -60,9 +61,28 @@ def get_google_sheet():
             "Closed Date"
         ]
         
-        # Push headers to Row 1 and bold them officially
+        # Push headers to Row 1
         sheet.update(range_name="A1:I1", values=[headers])
-        sheet.format("A1:I1", {"textFormat": {"bold": True}})
+        
+        # --- BENCHMARK VISUAL FORMATTING ENGINE ---
+        # Matches the dark plum background and clean white text alignment
+        sheet.format("A1:I1", {
+            "backgroundColor": {
+                "red": 0.61,    # Matches the corporate plum hex style (#9c4b72)
+                "green": 0.29,
+                "blue": 0.45
+            },
+            "textFormat": {
+                "bold": True,
+                "foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
+                "fontSize": 10
+            },
+            "horizontalAlignment": "LEFT",
+            "verticalAlignment": "MIDDLE"
+        })
+        
+        # Set row height for the header to give it that spacious, premium feel
+        sheet.set_row_height(1, 35)
         
     return sheet
     
