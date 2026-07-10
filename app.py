@@ -112,6 +112,7 @@ def extract_matter_data(doc_path):
 
 # --- 3. RUNTIME BATCH LOGIC ---
 
+# Inject custom CSS to enlarge the drag-and-drop upload bay surface area
 st.markdown(
     """
     <style>
@@ -131,7 +132,7 @@ st.markdown(
 if "uploader_key" not in st.session_state:
     st.session_state["uploader_key"] = 0
 
-# Expanded file uploader bay
+# The expanded file uploader bay
 uploaded_files = st.file_uploader(
     "Drag and drop Open File Sheets (.docx) here", 
     type=["docx"], 
@@ -142,12 +143,10 @@ uploaded_files = st.file_uploader(
 # Add a clean clear button right below the upload bay if files are present
 if uploaded_files:
     if st.button("🧹 Clear Upload Bay", use_container_width=True):
-        # Incrementing the key forces Streamlit to completely destroy the old widget and draw a fresh, empty one
         st.session_state["uploader_key"] += 1
         st.rerun()
 
 if uploaded_files:
-    # Strict safeguard check to enforce the 5-file cap
     if len(uploaded_files) > 5:
         st.error("⚠️ System safety cap exceeded. Please upload a maximum of 5 files at a time to prevent server drops.")
     else:
@@ -155,41 +154,50 @@ if uploaded_files:
             with st.spinner(f"Processing batch of {len(uploaded_files)} files..."):
                 sheet = get_google_sheet()
                 
-                # --- INTELLIGENT MONTH-ROLLOVER NUMBER ENGINE ---
-                # 1. Try to read current month's matter numbers
+                # --- 1. FIND THE NEXT AVAILABLE ROW SLOT (FIXED!) ---
+                client_values = sheet.col_values(5) 
+                target_row = 2
+                while target_row <= len(client_values) and client_values[target_row - 1].strip() != "":
+                    target_row += 1
+                
+                # --- 2. INTELLIGENT MONTH-ROLLOVER NUMBER ENGINE ---
                 try:
                     matter_nos = sheet.col_values(3)[1:]  
                     valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
                 except Exception:
                     valid_numbers = []
                 
-                # 2. If current tab is empty, automatically look back at the previous month
                 if not valid_numbers:
                     try:
-                        # Calculate the previous month's tab name dynamically
                         from datetime import timedelta
-                        # Subtracting 15 days from the 1st of this month safely lands us in the previous month
                         first_of_this_month = datetime.now().replace(day=1)
                         prev_month_date = first_of_this_month - timedelta(days=15)
                         PREV_SHEET_TAB_NAME = prev_month_date.strftime("%B %Y")
                         
-                        # Open the previous month's tab to grab its final matter number
+                        # Use the existing credentials scoping to check the previous tab safely
+                        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                        if os.path.exists("credentials.json"):
+                            creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+                        else:
+                            encoded_str = st.secrets["encoded_creds"]
+                            decoded_bytes = base64.b64decode(encoded_str)
+                            creds_dict = json.loads(decoded_bytes)
+                            creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+                            
                         client = gspread.authorize(creds)
                         prev_sheet = client.open(GOOGLE_SHEET_NAME).worksheet(PREV_SHEET_TAB_NAME)
                         prev_matter_nos = prev_sheet.col_values(3)[1:]
                         valid_numbers = [int(val.strip()) for val in prev_matter_nos if str(val).strip().isdigit()]
                     except Exception:
-                        # Fallback default if it's a brand new master sheet with no history at all
                         valid_numbers = [20260622]
                 
                 current_max_matter = max(valid_numbers)
                 
-                # Process each file one by one in order
+                # --- 3. PROCESS EACH FILE IN THE BATCH ---
                 for doc_file in uploaded_files:
                     next_index = target_row - 1
                     today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
                     
-                    # Increment matter number natively per file loop iteration
                     current_max_matter += 1
                     new_matter_no = str(current_max_matter)
                     
@@ -203,13 +211,11 @@ if uploaded_files:
                     cell_range = f"A{target_row}:H{target_row}"
                     sheet.update(range_name=cell_range, values=[new_row])
                     
-                    # Visually render success tracking elements for each logged document
                     st.success(f"✅ Loaded: {doc_file.name} ➡️ Row {target_row} (Matter No: {new_matter_no})")
                     
-                    # Push target row tracker down by 1 for the next file in line
                     target_row += 1
                     
-            st.balloons() # Batch complete celebration!
+            st.balloons()
 
         except Exception as e:
             st.error(f"Error executing automation batch processing: {e}")
