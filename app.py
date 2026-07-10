@@ -8,14 +8,14 @@ import os
 import base64
 import json
 
-st.set_page_config(page_title="Firm Master Sheet Automator", layout="centered")
+st.set_page_config(page_title="21 Chambers Client List", layout="centered")
 
 # --- UI INTERFACE GRAPHICS & LOGO ---
 # Updated to match your exact file name in the main repository
 if os.path.exists("Company Logo.png"):
     st.image("Company Logo.png", width=250)
 
-st.title("📂 Law Firm Intake Automator")
+st.title("📂 21 Chambers Automator")
 st.markdown("##### *Streamlined Batch File Processing for Operations*")
 st.write("Drag and drop up to **5 open file sheets** simultaneously to log them into the master Google Sheet.")
 st.markdown("---")
