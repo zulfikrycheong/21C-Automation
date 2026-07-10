@@ -120,7 +120,7 @@ st.markdown(
     }
     </style>
     """,
-    unsafe_html=True
+    unsafe_allow_html=True
 )
 
 # Initialize a session state key for the file uploader to allow manual clearing
