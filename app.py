@@ -279,17 +279,22 @@ if uploaded_files:
                     
                     st.toast(f"Logged: {doc_file.name} (Row {target_row})", icon="🔹")
 
-            # --- THE BALANCED CELEBRATION FLOW ---
+          # --- THE BALANCED CELEBRATION FLOW ---
             st.balloons()
             
-            # Update the uploader states silently behind the scenes
+            # 1. Update backend keys silently in memory
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
             
-            # A tiny 1.5-second sleep buffer to let the balloons glide up beautifully 
-            # before the script executes a clean, fluid page reload!
+            # 2. VISUAL ANCHOR: Lock a clean, solid completion banner on screen 
+            # This bridges the gap so the files staying in the bay looks 100% intentional!
+            st.success("🎉 **All matters have been successfully compiled and written to the master matrix!** Wiping upload bay for next batch...")
+            
+            # 3. Let the balloons glide and give the user time to read the confirmation
             import time
-            time.sleep(1.5)
+            time.sleep(2.0)
+            
+            # 4. Clean reload into a fresh workspace
             st.rerun()
 
         except Exception as e:
