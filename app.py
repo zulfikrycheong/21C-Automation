@@ -11,7 +11,6 @@ import json
 st.set_page_config(page_title="21 Chambers Client List", layout="centered")
 
 # --- UI INTERFACE GRAPHICS & LOGO ---
-# Updated to match the exact file name in the main repository
 if os.path.exists("Company Logo.png"):
     st.image("Company Logo.png", width=250)
 
@@ -21,8 +20,10 @@ st.write("Drag and drop up to **5 open file sheets** simultaneously to log them 
 st.markdown("---")
 
 # --- 1. GOOGLE SHEETS SETUP ---
-GOOGLE_SHEET_NAME = "Lazy Automation"  
-SHEET_TAB_NAME = "August 2026"
+# Dynamic Year & Month Engines: Autopilot tracking so you never manually adjust code strings
+CURRENT_YEAR = datetime.now().strftime("%Y")
+GOOGLE_SHEET_NAME = f"Lazy Automation {CURRENT_YEAR}"  
+SHEET_TAB_NAME = datetime.now().strftime("%B %Y")
 
 def get_google_sheet():
     scopes = [
@@ -42,19 +43,16 @@ def get_google_sheet():
     workbook = client.open(GOOGLE_SHEET_NAME)
     
     try:
-        # Try to access the current month's tab natively
         sheet = workbook.worksheet(SHEET_TAB_NAME)
     except gspread.exceptions.WorksheetNotFound:
         # --- THE ULTIMATE VISUAL CLONER ---
-        # Fetch the existing master template tab
         template_sheet = workbook.worksheet("Template")
         
-        # Duplicate the template tab exactly into the workbook
-        # Copies all dropdowns, colors, borders, and column sizes!
+        # Clones colors, sizes, dropdown data validations, and inserts it at the far left slot
         duplicated_sheet = workbook.duplicate_sheet(
             source_sheet_id=template_sheet.id,
             new_sheet_name=SHEET_TAB_NAME,
-            insert_sheet_index=0 # Puts it on the most left slot instantly
+            insert_sheet_index=0 
         )
         sheet = duplicated_sheet
         
@@ -77,7 +75,6 @@ def extract_matter_data(doc_path):
                 
     full_text = "\n".join(text_lines)
     
-    # Match Type of Work
     if "uncontested divorce" in full_text.lower():
         matter_type = "UD"
     elif "contested divorce" in full_text.lower():
@@ -130,13 +127,12 @@ def extract_matter_data(doc_path):
 
 # --- SIDEBAR DEPLOYMENT ARCHITECTURE ---
 with st.sidebar:
-    st.image("Company Logo.png", use_container_width=True)  # Swap with your actual image file name if different!
+    st.image("Company Logo.png", use_container_width=True)  
     st.markdown("### 🛠️ Operation Logistics")
     st.info("This system automates docx intake pipelines directly into the firm master sheet matrix.")
     
     st.markdown("---")
     
-    # --- AUTOMATION CREDENTIAL DISPLAY FOR FUTURE OFFICE ADMINS ---
     st.markdown("### 📋 System Access Email")
     st.caption("If the firm creates a brand new master Google Sheet file, you MUST share the new sheet with this email as an **Editor** or the app will fail:")
     
@@ -151,7 +147,7 @@ with st.sidebar:
             creds_dict = json.loads(decoded_bytes)
             sys_email = creds_dict.get("client_email", "Not found")
             
-        st.code(sys_email, language="text")  # Clear, one-click copy box!
+        st.code(sys_email, language="text")  
     except Exception:
         st.error("Could not resolve system email details.")
 
@@ -175,11 +171,13 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Initialize a session state key for the file uploader to allow manual clearing
+# Core state mechanics for tracking file batch alterations
 if "uploader_key" not in st.session_state:
     st.session_state["uploader_key"] = 0
+if "previous_files" not in st.session_state:
+    st.session_state["previous_files"] = []
 
-# The expanded file uploader bay
+# Dynamic uploader container
 uploaded_files = st.file_uploader(
     "Drag and drop Open File Sheets (.docx) here", 
     type=["docx"], 
@@ -187,10 +185,18 @@ uploaded_files = st.file_uploader(
     key=f"uploader_{st.session_state['uploader_key']}"
 )
 
-# Add a clean clear button right below the upload bay if files are present
+# --- TRACKING ENGINE FOR AUTO-WIPING OUTDATED NOTIFICATIONS ---
+current_file_names = [f.name for f in uploaded_files] if uploaded_files else []
+
+# The exact second a different batch is dropped or removed, previous state logs disappear
+if current_file_names != st.session_state["previous_files"]:
+    st.session_state["previous_files"] = current_file_names
+    st.rerun()
+
 if uploaded_files:
     if st.button("🧹 Clear Upload Bay", use_container_width=True):
         st.session_state["uploader_key"] += 1
+        st.session_state["previous_files"] = []
         st.rerun()
 
 if uploaded_files:
@@ -201,13 +207,7 @@ if uploaded_files:
             with st.spinner(f"Processing batch of {len(uploaded_files)} files..."):
                 sheet = get_google_sheet()
                 
-                # --- 1. FIND THE NEXT AVAILABLE ROW SLOT (FIXED!) ---
-                client_values = sheet.col_values(5) 
-                target_row = 2
-                while target_row <= len(client_values) and client_values[target_row - 1].strip() != "":
-                    target_row += 1
-                
-                # --- 2. INTELLIGENT MONTH-ROLLOVER NUMBER ENGINE ---
+                # --- 2. INTELLIGENT MONTH/YEAR ROLLOVER SEQUENCING ---
                 try:
                     matter_nos = sheet.col_values(3)[1:]  
                     valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
@@ -215,40 +215,42 @@ if uploaded_files:
                     valid_numbers = []
                 
                 if not valid_numbers:
-                    try:
-                        from datetime import timedelta
-                        first_of_this_month = datetime.now().replace(day=1)
-                        prev_month_date = first_of_this_month - timedelta(days=15)
-                        PREV_SHEET_TAB_NAME = prev_month_date.strftime("%B %Y")
-                        
-                        # --- FIX: RE-BUILD CREDS PROPERLY FOR LOOK-BACK ---
-                        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-                        if os.path.exists("credentials.json"):
-                            lookback_creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
-                        else:
-                            encoded_str = st.secrets["encoded_creds"]
-                            decoded_bytes = base64.b64decode(encoded_str)
-                            creds_dict = json.loads(decoded_bytes)
-                            lookback_creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+                    # New calendar year triggers a crisp sequence restart to 0001
+                    if datetime.now().month == 1:
+                        current_max_matter = int(f"{CURRENT_YEAR}0000")
+                    else:
+                        # Standard monthly lookup logic
+                        try:
+                            from datetime import timedelta
+                            first_of_this_month = datetime.now().replace(day=1)
+                            prev_month_date = first_of_this_month - timedelta(days=15)
+                            PREV_SHEET_TAB_NAME = prev_month_date.strftime("%B %Y")
                             
-                        client = gspread.authorize(lookback_creds)
-                        prev_sheet = client.open(GOOGLE_SHEET_NAME).worksheet(PREV_SHEET_TAB_NAME)
-                        prev_matter_nos = prev_sheet.col_values(3)[1:]
-                        valid_numbers = [int(val.strip()) for val in prev_matter_nos if str(val).strip().isdigit()]
-                    except Exception as e:
-                        # If lookback genuinely fails, fall back to a safer default or log it
-                        valid_numbers = [20260728] 
+                            scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                            if os.path.exists("credentials.json"):
+                                lookback_creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+                            else:
+                                encoded_str = st.secrets["encoded_creds"]
+                                decoded_bytes = base64.b64decode(encoded_str)
+                                creds_dict = json.loads(decoded_bytes)
+                                lookback_creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+                                
+                            client = gspread.authorize(lookback_creds)
+                            prev_sheet = client.open(GOOGLE_SHEET_NAME).worksheet(PREV_SHEET_TAB_NAME)
+                            prev_matter_nos = prev_sheet.col_values(3)[1:]
+                            valid_numbers = [int(val.strip()) for val in prev_matter_nos if str(val).strip().isdigit()]
+                        except Exception:
+                            valid_numbers = [20260728] 
                 
                 current_max_matter = max(valid_numbers) if valid_numbers else 20260728
                 
-               # --- 3. PROCESS EACH FILE IN THE BATCH ---
+                # --- 3. PROCESS EACH FILE IN THE BATCH ---
                 for doc_file in uploaded_files:
-                    # --- CRITICAL FIX: FIND THE ROW OF THE MAX NUMBER IN COLUMN C ---
-                    matter_nos = sheet.col_values(3)  # Read all values in Column C (Matter No)
+                    # Target locks onto the row exactly 1 index beneath the absolute highest matter digit
+                    matter_nos = sheet.col_values(3) 
                     
-                    # Track down the max number and its physical row index
                     max_num = -1
-                    max_row_index = 1  # Default to header row if nothing found
+                    max_row_index = 1 
                     
                     for idx, val in enumerate(matter_nos):
                         clean_val = str(val).strip()
@@ -256,23 +258,18 @@ if uploaded_files:
                             num = int(clean_val)
                             if num > max_num:
                                 max_num = num
-                                max_row_index = idx + 1  # sheets are 1-indexed
+                                max_row_index = idx + 1 
                     
-                    # The target row is strictly 1 row below the highest number found
                     if max_num == -1:
-                        # If the sheet has no numbers at all yet, start right below header
                         target_row = 2
-                        is_january = datetime.now().month == 1
-                        if is_january:
-                            current_year_str = datetime.now().strftime("%Y")
-                            current_max_matter = int(f"{current_year_str}0000")
+                        if datetime.now().month == 1:
+                            current_max_matter = int(f"{CURRENT_YEAR}0000")
                         else:
-                            current_max_matter = 20260728  # Mid-year emergency baseline
+                            current_max_matter = 20260728 
                     else:
                         target_row = max_row_index + 1
                         current_max_matter = max_num
                     
-                    # Increment the number sequence cleanly ($n + 1$)
                     current_max_matter += 1
                     new_matter_no = str(current_max_matter)
                     next_index = target_row - 1
@@ -296,8 +293,6 @@ if uploaded_files:
                     sheet.update(range_name=cell_range, values=[new_row])
                     
                     st.success(f"✅ Loaded: {doc_file.name} ➡️ Row {target_row} (Matter No: {new_matter_no})")
-                    
-                    target_row += 1
                     
             st.balloons()
 
