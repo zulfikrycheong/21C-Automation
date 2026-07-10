@@ -81,9 +81,6 @@ def get_google_sheet():
             "verticalAlignment": "MIDDLE"
         })
         
-        # Set row height for the header to give it that spacious, premium feel
-        sheet.set_row_height(1, 35)
-        
     return sheet
     
 # --- 2. DOCX PARSING LOGIC ---
