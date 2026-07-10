@@ -241,27 +241,38 @@ if uploaded_files:
                 
                 current_max_matter = max(valid_numbers) if valid_numbers else 20260728
                 
-                # --- 3. PROCESS EACH FILE IN THE BATCH ---
+               # --- 3. PROCESS EACH FILE IN THE BATCH ---
                 for doc_file in uploaded_files:
-                    # Recalculate the next available row slot freshly for each file
-                    date_opened_values = sheet.col_values(2) 
-                    target_row = 2
-                    while target_row <= len(date_opened_values) and date_opened_values[target_row - 1].strip() != "":
-                        target_row += 1
+                    # --- FIX: ALWAYS TARGET THE ABSOLUTE BOTTOM OF THE SHEET ---
+                    # Instead of looping to find gaps, grab the total length of Column B (Date Opened)
+                    # or Column A. If there are 10 rows populated, len() gives 10, so the next row is 11.
+                    populated_rows = sheet.col_values(2)  # Scans Date Opened column
+                    target_row = len(populated_rows) + 1
                     
+                    # Ensure we don't accidentally try to overwrite the header row if the sheet is completely fresh
+                    if target_row < 2:
+                        target_row = 2
+                    
+                    # If Column A contains pre-printed index numbers (1, 2, 3...) in your template,
+                    # next_index will just match the physical target row minus 1.
                     next_index = target_row - 1
                     today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
                     
-                    # --- CRITICAL FIX: Freshly read the maximum number right now to prevent skipping ---
+                    # --- Fetch the maximum number right now to prevent sequence breaks ---
                     try:
                         matter_nos = sheet.col_values(3)[1:]  
                         valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
                     except Exception:
                         valid_numbers = []
                         
-                    # If current tab has no numbers yet, fall back to the smart engine logic
                     if not valid_numbers:
-                        current_max_matter += 1
+                        # Fallback to the January reset or default baseline if tab is blank
+                        is_january = datetime.now().month == 1
+                        if is_january:
+                            current_year_str = datetime.now().strftime("%Y")
+                            current_max_matter = int(f"{current_year_str}0001")
+                        else:
+                            current_max_matter = 20260729  # Your active mid-year safety fallback
                     else:
                         current_max_matter = max(valid_numbers) + 1
                         
