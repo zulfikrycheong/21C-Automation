@@ -65,9 +65,9 @@ def extract_matter_data(doc_path):
     elif "contested divorce" in full_text.lower():
         matter_type = "CD"
     elif "annulment" in full_text.lower():
-        matter_type = "AN"
+        matter_type = "Annulment"
     elif "variation" in full_text.lower():
-        matter_type = "VAR"
+        matter_type = "Variation"
     else:
         matter_type = "Others"
     
