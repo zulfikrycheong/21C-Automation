@@ -130,7 +130,7 @@ def extract_matter_data(doc_path):
 
 # --- SIDEBAR DEPLOYMENT ARCHITECTURE ---
 with st.sidebar:
-    st.image("logo.png", use_container_width=True)  # Swap with your actual image file name if different!
+    st.image("Company Logo.png", use_container_width=True)  # Swap with your actual image file name if different!
     st.markdown("### 🛠️ Operation Logistics")
     st.info("This system automates docx intake pipelines directly into the firm master sheet matrix.")
     
