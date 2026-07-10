@@ -59,10 +59,15 @@ def extract_matter_data(doc_path):
                 
     full_text = "\n".join(text_lines)
     
+    # Match Type of Work (Updated to support Annulment and Variation)
     if "uncontested divorce" in full_text.lower():
         matter_type = "UD"
     elif "contested divorce" in full_text.lower():
         matter_type = "CD"
+    elif "annulment" in full_text.lower():
+        matter_type = "AN"
+    elif "variation" in full_text.lower():
+        matter_type = "VAR"
     else:
         matter_type = "Others"
     
