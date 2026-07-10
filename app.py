@@ -174,24 +174,25 @@ if uploaded_files:
                         prev_month_date = first_of_this_month - timedelta(days=15)
                         PREV_SHEET_TAB_NAME = prev_month_date.strftime("%B %Y")
                         
-                        # Use the existing credentials scoping to check the previous tab safely
+                        # --- FIX: RE-BUILD CREDS PROPERLY FOR LOOK-BACK ---
                         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                         if os.path.exists("credentials.json"):
-                            creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+                            lookback_creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
                         else:
                             encoded_str = st.secrets["encoded_creds"]
                             decoded_bytes = base64.b64decode(encoded_str)
                             creds_dict = json.loads(decoded_bytes)
-                            creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+                            lookback_creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
                             
-                        client = gspread.authorize(creds)
+                        client = gspread.authorize(lookback_creds)
                         prev_sheet = client.open(GOOGLE_SHEET_NAME).worksheet(PREV_SHEET_TAB_NAME)
                         prev_matter_nos = prev_sheet.col_values(3)[1:]
                         valid_numbers = [int(val.strip()) for val in prev_matter_nos if str(val).strip().isdigit()]
-                    except Exception:
-                        valid_numbers = [20260622]
+                    except Exception as e:
+                        # If lookback genuinely fails, fall back to a safer default or log it
+                        valid_numbers = [20260728] 
                 
-                current_max_matter = max(valid_numbers)
+                current_max_matter = max(valid_numbers) if valid_numbers else 20260728
                 
                 # --- 3. PROCESS EACH FILE IN THE BATCH ---
                 for doc_file in uploaded_files:
