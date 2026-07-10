@@ -11,7 +11,7 @@ import json
 st.set_page_config(page_title="21 Chambers Client List", layout="centered")
 
 # --- UI INTERFACE GRAPHICS & LOGO ---
-# Updated to match your exact file name in the main repository
+# Updated to match the exact file name in the main repository
 if os.path.exists("Company Logo.png"):
     st.image("Company Logo.png", width=250)
 
@@ -59,7 +59,7 @@ def extract_matter_data(doc_path):
                 
     full_text = "\n".join(text_lines)
     
-    # Match Type of Work (Updated to support Annulment and Variation)
+    # Match Type of Work
     if "uncontested divorce" in full_text.lower():
         matter_type = "UD"
     elif "contested divorce" in full_text.lower():
@@ -112,7 +112,6 @@ def extract_matter_data(doc_path):
 
 # --- 3. RUNTIME BATCH LOGIC ---
 
-# Inject custom CSS to enlarge the drag-and-drop upload bay surface area
 st.markdown(
     """
     <style>
@@ -132,7 +131,7 @@ st.markdown(
 if "uploader_key" not in st.session_state:
     st.session_state["uploader_key"] = 0
 
-# The expanded file uploader bay
+# Expanded file uploader bay
 uploaded_files = st.file_uploader(
     "Drag and drop Open File Sheets (.docx) here", 
     type=["docx"], 
