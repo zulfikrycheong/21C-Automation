@@ -1,36 +1,29 @@
+# Make sure these are at the absolute top of app.py along with your other imports!
 import streamlit as st
 import docx
 import re
 from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
-
-st.set_page_config(page_title="Firm Master Sheet Automator", layout="centered")
-st.title("📂 Law Firm Intake Automator")
-st.write("Drag and drop an open file sheet to automatically log it into the master Google Sheet.")
-
-# --- 1. GOOGLE SHEETS SETUP ---
-GOOGLE_SHEET_NAME = "Lazy Automation"  
-SHEET_TAB_NAME = "July 2026"  
+import os
+import base64
+import json
 
 def get_google_sheet():
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds_dict = dict(st.secrets["gcs"])
     
-    # Just clean up any trailing whitespace from the triple-quote format
-    creds_dict["private_key"] = creds_dict["private_key"].strip()
-    
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    client = gspread.authorize(creds)
-    sheet = client.open(GOOGLE_SHEET_NAME).worksheet(SHEET_TAB_NAME)
-    return sheet
-    
-    # This pulls directly from the secure text box you pasted into Advanced Settings!
-    creds_dict = dict(st.secrets["gcs"])
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    # Dual-mode: Local uses file, Cloud uses the bulletproof base64 string!
+    if os.path.exists("credentials.json"):
+        creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+    else:
+        encoded_str = st.secrets["encoded_creds"]
+        decoded_bytes = base64.b64decode(encoded_str)
+        creds_dict = json.loads(decoded_bytes)
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        
     client = gspread.authorize(creds)
     sheet = client.open(GOOGLE_SHEET_NAME).worksheet(SHEET_TAB_NAME)
     return sheet
