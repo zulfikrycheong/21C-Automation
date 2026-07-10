@@ -42,44 +42,21 @@ def get_google_sheet():
     workbook = client.open(GOOGLE_SHEET_NAME)
     
     try:
+        # Try to access the current month's tab natively
         sheet = workbook.worksheet(SHEET_TAB_NAME)
     except gspread.exceptions.WorksheetNotFound:
-        # --- THE AUTO-CANVAS GENERATOR (UPDATED POSITION TO MOST LEFT) ---
-        # index=0 forces the newly created monthly tab to appear at the very front/left
-        sheet = workbook.add_worksheet(title=SHEET_TAB_NAME, rows="1000", cols="26", index=0)
+        # --- THE ULTIMATE VISUAL CLONER ---
+        # Fetch the perfectly styled master template tab you created
+        template_sheet = workbook.worksheet("Template")
         
-        # EXACT corporate headers from the master sheet layout
-        headers = [
-            "Column 1", 
-            "Date Opened", 
-            "Matter No", 
-            "Type of Work", 
-            "Client(s)", 
-            "Contact(s)", 
-            "Referral", 
-            "Bill Paid (Yes/No)", 
-            "Closed Date"
-        ]
-        
-        # Push headers to Row 1
-        sheet.update(range_name="A1:I1", values=[headers])
-        
-        # --- BENCHMARK VISUAL FORMATTING ENGINE ---
-        # Matches the dark plum background and clean white text alignment
-        sheet.format("A1:I1", {
-            "backgroundColor": {
-                "red": 0.61,    # Matches the corporate plum hex style (#9c4b72)
-                "green": 0.29,
-                "blue": 0.45
-            },
-            "textFormat": {
-                "bold": True,
-                "foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
-                "fontSize": 10
-            },
-            "horizontalAlignment": "LEFT",
-            "verticalAlignment": "MIDDLE"
-        })
+        # Duplicate the template tab exactly into the workbook
+        # This copies all dropdowns, colors, borders, and column sizes!
+        duplicated_sheet = workbook.duplicate_sheet(
+            source_sheet_id=template_sheet.id,
+            new_sheet_name=SHEET_TAB_NAME,
+            insert_sheet_index=0 # Puts it on the most left slot instantly
+        )
+        sheet = duplicated_sheet
         
     return sheet
     
