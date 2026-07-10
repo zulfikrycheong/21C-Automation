@@ -128,6 +128,35 @@ def extract_matter_data(doc_path):
             
     return matter_type, clients_field, contacts_field, referral
 
+# --- SIDEBAR DEPLOYMENT ARCHITECTURE ---
+with st.sidebar:
+    st.image("logo.png", use_container_width=True)  # Swap with your actual image file name if different!
+    st.markdown("### 🛠️ Operation Logistics")
+    st.info("This system automates docx intake pipelines directly into the firm master sheet matrix.")
+    
+    st.markdown("---")
+    
+    # --- AUTOMATION CREDENTIAL DISPLAY FOR FUTURE OFFICE ADMINS ---
+    st.markdown("### 📋 System Access Email")
+    st.caption("If the firm creates a brand new master Google Sheet file, you MUST share the new sheet with this email as an **Editor** or the app will fail:")
+    
+    try:
+        if os.path.exists("credentials.json"):
+            with open("credentials.json", "r") as f:
+                c_data = json.load(f)
+                sys_email = c_data.get("client_email", "Not found")
+        else:
+            encoded_str = st.secrets["encoded_creds"]
+            decoded_bytes = base64.b64decode(encoded_str)
+            creds_dict = json.loads(decoded_bytes)
+            sys_email = creds_dict.get("client_email", "Not found")
+            
+        st.code(sys_email, language="text")  # Clear, one-click copy box!
+    except Exception:
+        st.error("Could not resolve system email details.")
+
+st.markdown("---")
+
 # --- 3. RUNTIME BATCH LOGIC ---
 
 # Inject custom CSS to enlarge the drag-and-drop upload bay surface area
