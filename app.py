@@ -286,9 +286,11 @@ if uploaded_files:
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
             
-            # Using a dynamic, native UI rerun link rather than a heavy thread lock 
-            # keeps the frame transitions buttery smooth and auto-wipes instantly!
-            st.fragment(st.rerun)()
+            # A tiny 1.5-second sleep buffer to let the balloons glide up beautifully 
+            # before the script executes a clean, fluid page reload!
+            import time
+            time.sleep(1.5)
+            st.rerun()
 
         except Exception as e:
             st.error(f"Error executing automation batch processing: {e}")
