@@ -279,28 +279,47 @@ if uploaded_files:
                     
                     st.toast(f"Logged: {doc_file.name} (Row {target_row})", icon="🔹")
 
-          # --- THE BALANCED CELEBRATION FLOW ---
+          # --- THE BATCH COMPLETION CASCADE UI ENGINE ---
             st.balloons()
             
-            # 1. Update backend keys silently in memory
+            # Create a dedicated layout container for our animated queue
+            queue_placeholder = st.empty()
+            
+            # Extract the current list of processed file names
+            active_queue = [f.name for f in uploaded_files]
+            
+            # Import time for frame-by-frame cascade pacing
+            import time
+            
+            # Cascade Loop: Pop files one by one from left to right
+            while len(active_queue) > 0:
+                with queue_placeholder.container():
+                    st.success(f"🎉 **Batch compilation complete! Saving and clearing matrix queue... ({len(active_queue)} left)**")
+                    
+                    # Render the remaining files as polished, side-by-side horizontal blocks
+                    # Streamlit naturally scales columns, so when one drops, the rest slide left!
+                    cols = st.columns(min(len(active_queue), 5))
+                    for idx, file_name in enumerate(active_queue):
+                        with cols[idx]:
+                            st.info(f"📄 {file_name[:12]}...") # Clean, trimmed file card layout
+                
+                # Pacing delay: Let the user see the current queue state for a brief beat
+                time.sleep(0.6)
+                
+                # POP! Remove the leftmost file (index 0) from the queue matrix
+                active_queue.pop(0)
+            
+            # Final sweep: Completely clear out the visual placeholder
+            queue_placeholder.empty()
+            st.toast("🚀 All operations successfully finalized!", icon="✨")
+            time.sleep(0.3)
+            
+            # --- THE SILENT AUTO-FLUSH KICKER ---
+            # Increment the uploader widget key behind the scenes
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
             
-            # 2. Add an empty placeholder container
-            placeholder = st.empty()
-            with placeholder.container():
-                st.success("🎉 **All matters have been successfully compiled and written to the master matrix!** Wiping upload bay for next batch...")
-            
-            # 3. Give the user a brief second to see the success message
-            import time
-            time.sleep(1.5)
-            
-            # 4. UX SLEIGHT OF HAND: Wipe the banner right before the rerun!
-            # This makes the screen transition back to blank naturally while the balloons 
-            # are finishing, completely hiding the harsh, mechanical page reload.
-            placeholder.empty()
-            time.sleep(0.5)
-            
+            # Execute the final refresh on a completely empty canvas
             st.rerun()
 
         except Exception as e:
