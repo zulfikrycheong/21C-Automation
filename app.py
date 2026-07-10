@@ -10,13 +10,18 @@ import json
 
 st.set_page_config(page_title="Firm Master Sheet Automator", layout="centered")
 
-# --- UI INTERFACE GRAPHICS (THE COMING BACK TO LIFE PART) ---
+# --- UI INTERFACE GRAPHICS & LOGO ---
+# Check if logo exists, display it centered, otherwise skip cleanly
+if os.path.exists("logo.png"):
+    st.image("logo.png", width=250)
+
 st.title("📂 Law Firm Intake Automator")
-st.write("Drag and drop an open file sheet to automatically log it into the master Google Sheet.")
+st.markdown("##### *Streamlined Batch File Processing for Operations*")
+st.write("Drag and drop up to **5 open file sheets** simultaneously to log them into the master Google Sheet.")
+st.markdown("---")
 
 # --- 1. GOOGLE SHEETS SETUP ---
 GOOGLE_SHEET_NAME = "Lazy Automation"  
-# Automatically generates the current month and year dynamically (e.g., "July 2026")
 SHEET_TAB_NAME = datetime.now().strftime("%B %Y")
 
 def get_google_sheet():
@@ -100,45 +105,55 @@ def extract_matter_data(doc_path):
             
     return matter_type, clients_field, contacts_field, referral
 
-# --- 3. RUNTIME LOGIC ---
-uploaded_file = st.file_uploader("Drag and drop Open File Sheet (.docx) here", type=["docx"])
+# --- 3. RUNTIME BATCH LOGIC ---
+# Added accept_multiple_files=True to handle lists of files natively
+uploaded_files = st.file_uploader("Drag and drop Open File Sheets (.docx) here", type=["docx"], accept_multiple_files=True)
 
-if uploaded_file is not None:
-    try:
-        with st.spinner("Processing data..."):
-            sheet = get_google_sheet()
-            
-            matter_nos = sheet.col_values(3)[1:]  
-            valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
-            new_matter_no = str(max(valid_numbers) + 1) if valid_numbers else "20260623"
-            
-            client_values = sheet.col_values(5) 
-            
-            target_row = 2
-            while target_row <= len(client_values) and client_values[target_row - 1].strip() != "":
-                target_row += 1
+if uploaded_files:
+    # Strict safeguard check to enforce the 5-file cap
+    if len(uploaded_files) > 5:
+        st.error("⚠️ System safety cap exceeded. Please upload a maximum of 5 files at a time to prevent server drops.")
+    else:
+        try:
+            with st.spinner(f"Processing batch of {len(uploaded_files)} files..."):
+                sheet = get_google_sheet()
                 
-            next_index = target_row - 1
-            today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
-            matter_type, clients, contacts, referral = extract_matter_data(uploaded_file)
-            
-            new_row = [
-                next_index, today_date, new_matter_no, matter_type, 
-                clients, contacts, referral, "Yes"
-            ]
-            
-            cell_range = f"A{target_row}:H{target_row}"
-            sheet.update(range_name=cell_range, values=[new_row])
-            
-        st.success(f"🚀 Success! Matter No {new_matter_no} written directly to Row {target_row}!")
-        st.json({
-            "Row Slot": target_row,
-            "Matter No": new_matter_no,
-            "Type": matter_type,
-            "Clients": clients.split('\n'),
-            "Contacts": contacts.split('\n'),
-            "Referral": referral
-        })
+                # Load sheet structures outside the loop to minimize API overhead
+                matter_nos = sheet.col_values(3)[1:]  
+                valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
+                current_max_matter = max(valid_numbers) if valid_numbers else 20260622
+                
+                client_values = sheet.col_values(5) 
+                target_row = 2
+                while target_row <= len(client_values) and client_values[target_row - 1].strip() != "":
+                    target_row += 1
+                
+                # Process each file one by one in order
+                for doc_file in uploaded_files:
+                    next_index = target_row - 1
+                    today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
+                    
+                    # Increment matter number natively per file loop iteration
+                    current_max_matter += 1
+                    new_matter_no = str(current_max_matter)
+                    
+                    matter_type, clients, contacts, referral = extract_matter_data(doc_file)
+                    
+                    new_row = [
+                        next_index, today_date, new_matter_no, matter_type, 
+                        clients, contacts, referral, "Yes"
+                    ]
+                    
+                    cell_range = f"A{target_row}:H{target_row}"
+                    sheet.update(range_name=cell_range, values=[new_row])
+                    
+                    # Visually render success tracking elements for each logged document
+                    st.success(f"✅ Loaded: {doc_file.name} ➡️ Row {target_row} (Matter No: {new_matter_no})")
+                    
+                    # Push target row tracker down by 1 for the next file in line
+                    target_row += 1
+                    
+            st.balloons() # Batch complete celebration!
 
-    except Exception as e:
-        st.error(f"Error executing automation: {e}")
+        except Exception as e:
+            st.error(f"Error executing automation batch processing: {e}")
