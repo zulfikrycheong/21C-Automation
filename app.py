@@ -11,9 +11,9 @@ import json
 st.set_page_config(page_title="Firm Master Sheet Automator", layout="centered")
 
 # --- UI INTERFACE GRAPHICS & LOGO ---
-# Check if logo exists, display it centered, otherwise skip cleanly
-if os.path.exists("logo.png"):
-    st.image("logo.png", width=250)
+# Updated to match your exact file name in the main repository
+if os.path.exists("Company Logo.png"):
+    st.image("Company Logo.png", width=250)
 
 st.title("📂 Law Firm Intake Automator")
 st.markdown("##### *Streamlined Batch File Processing for Operations*")
