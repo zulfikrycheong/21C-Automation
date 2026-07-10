@@ -22,7 +22,7 @@ st.markdown("---")
 
 # --- 1. GOOGLE SHEETS SETUP ---
 GOOGLE_SHEET_NAME = "Lazy Automation"  
-SHEET_TAB_NAME = "August 2026"
+SHEET_TAB_NAME = "September 2026"
 
 def get_google_sheet():
     scopes = [
