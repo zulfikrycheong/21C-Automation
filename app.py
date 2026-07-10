@@ -279,47 +279,38 @@ if uploaded_files:
                     
                     st.toast(f"Logged: {doc_file.name} (Row {target_row})", icon="🔹")
 
-          # --- THE BATCH COMPLETION CASCADE UI ENGINE ---
+          # --- THE HIGH-PERFORMANCE CSS CASCADE ENGINE ---
             st.balloons()
             
-            # Create a dedicated layout container for our animated queue
-            queue_placeholder = st.empty()
+            # Inject a micro-second native CSS animation block to smoothly slide and melt the boxes away
+            st.markdown(
+                """
+                <style>
+                /* Target the file uploader blocks and apply a rapid cascading fade and shift */
+                [data-testid="stFileUploader"] {
+                    animation: cascadeOut 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+                }
+                @keyframes cascadeOut {
+                    0% { opacity: 1; transform: scale(1) translateX(0); }
+                    50% { opacity: 0.5; transform: scale(0.95) translateX(-20px); }
+                    100% { opacity: 0; transform: scale(0.9) translateX(-50px); filter: blur(4px); }
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
             
-            # Extract the current list of processed file names
-            active_queue = [f.name for f in uploaded_files]
+            # An elegant success banner that acts as the final visual anchor
+            st.success("🎉 **Batch compilation complete! Saving and clearing matrix queue...**")
             
-            # Import time for frame-by-frame cascade pacing
-            import time
-            
-            # Cascade Loop: Pop files one by one from left to right
-            while len(active_queue) > 0:
-                with queue_placeholder.container():
-                    st.success(f"🎉 **Batch compilation complete! Saving and clearing matrix queue... ({len(active_queue)} left)**")
-                    
-                    # Render the remaining files as polished, side-by-side horizontal blocks
-                    # Streamlit naturally scales columns, so when one drops, the rest slide left!
-                    cols = st.columns(min(len(active_queue), 5))
-                    for idx, file_name in enumerate(active_queue):
-                        with cols[idx]:
-                            st.info(f"📄 {file_name[:12]}...") # Clean, trimmed file card layout
-                
-                # Pacing delay: Let the user see the current queue state for a brief beat
-                time.sleep(0.6)
-                
-                # POP! Remove the leftmost file (index 0) from the queue matrix
-                active_queue.pop(0)
-            
-            # Final sweep: Completely clear out the visual placeholder
-            queue_placeholder.empty()
-            st.toast("🚀 All operations successfully finalized!", icon="✨")
-            time.sleep(0.3)
-            
-            # --- THE SILENT AUTO-FLUSH KICKER ---
-            # Increment the uploader widget key behind the scenes
+            # Increment the uploader widget keys silently in memory
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
             
-            # Execute the final refresh on a completely empty canvas
+            # A tiny 0.8s buffer matching the CSS animation exactly so the page 
+            # reloads the millisecond the boxes finish melting away!
+            import time
+            time.sleep(0.8)
             st.rerun()
 
         except Exception as e:
