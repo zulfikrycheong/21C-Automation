@@ -199,108 +199,101 @@ if uploaded_files:
         st.error("⚠️ System safety cap exceeded. Please upload a maximum of 5 files at a time to prevent server drops.")
     else:
         try:
-            with st.spinner(f"Processing batch of {len(uploaded_files)} files..."):
-                sheet = get_google_sheet()
+            # Main high-performance trigger button
+            if st.button("🚀 Process Batch Layout", use_container_width=True):
                 
-                # --- 2. INTELLIGENT MONTH/YEAR ROLLOVER SEQUENCING ---
-                try:
-                    matter_nos = sheet.col_values(3)[1:]  
-                    valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
-                except Exception:
-                    valid_numbers = []
-                
-                if not valid_numbers:
-                    if datetime.now().month == 1:
-                        current_year_str = datetime.now().strftime("%Y")
-                        current_max_matter = int(f"{current_year_str}0000")
-                    else:
-                        try:
-                            from datetime import timedelta
-                            first_of_this_month = datetime.now().replace(day=1)
-                            prev_month_date = first_of_this_month - timedelta(days=15)
-                            PREV_SHEET_TAB_NAME = prev_month_date.strftime("%B %Y")
-                            
-                            scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-                            if os.path.exists("credentials.json"):
-                                lookback_creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
-                            else:
-                                encoded_str = st.secrets["encoded_creds"]
-                                decoded_bytes = base64.b64decode(encoded_str)
-                                creds_dict = json.loads(decoded_bytes)
-                                lookback_creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-                                
-                            client = gspread.authorize(lookback_creds)
-                            prev_sheet = client.open(GOOGLE_SHEET_NAME).worksheet(PREV_SHEET_TAB_NAME)
-                            prev_matter_nos = prev_sheet.col_values(3)[1:]
-                            valid_numbers = [int(val.strip()) for val in prev_matter_nos if str(val).strip().isdigit()]
-                        except Exception:
-                            valid_numbers = [20260728] 
-                
-                current_max_matter = max(valid_numbers) if valid_numbers else 20260728
-                
-                # --- 3. PROCESS EACH FILE IN THE BATCH ---
-                for doc_file in uploaded_files:
-                    matter_nos = sheet.col_values(3) 
-                    max_num = -1
-                    max_row_index = 1 
+                # Dynamic morphing UI status box (replaces the rigid gray spinner)
+                with st.status("🔗 Initializing secure data pipelines...", expanded=True) as status:
+                    sheet = get_google_sheet()
+                    status.update(label="📊 Scanning matter matrix for sequence alignment...", state="running")
                     
-                    for idx, val in enumerate(matter_nos):
-                        clean_val = str(val).strip()
-                        if clean_val.isdigit():
-                            num = int(clean_val)
-                            if num > max_num:
-                                max_num = num
-                                max_row_index = idx + 1 
+                    # --- 2. INTELLIGENT MONTH/YEAR ROLLOVER SEQUENCING ---
+                    try:
+                        matter_nos = sheet.col_values(3)[1:]  
+                        valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
+                    except Exception:
+                        valid_numbers = []
                     
-                    if max_num == -1:
-                        target_row = 2
+                    if not valid_numbers:
                         if datetime.now().month == 1:
-                            current_year_str = datetime.now().strftime("%Y")
-                            current_max_matter = int(f"{current_year_str}0000")
+                            current_max_matter = int(f"{CURRENT_YEAR}0000")
                         else:
-                            current_max_matter = 20260728 
-                    else:
-                        target_row = max_row_index + 1
-                        current_max_matter = max_num
+                            try:
+                                from datetime import timedelta
+                                first_of_this_month = datetime.now().replace(day=1)
+                                prev_month_date = first_of_this_month - timedelta(days=15)
+                                PREV_SHEET_TAB_NAME = prev_month_date.strftime("%B %Y")
+                                
+                                scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                                if os.path.exists("credentials.json"):
+                                    lookback_creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+                                else:
+                                    encoded_str = st.secrets["encoded_creds"]
+                                    decoded_bytes = base64.b64decode(encoded_str)
+                                    creds_dict = json.loads(decoded_bytes)
+                                    lookback_creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+                                    
+                                client = gspread.authorize(lookback_creds)
+                                prev_sheet = client.open(GOOGLE_SHEET_NAME).worksheet(PREV_SHEET_TAB_NAME)
+                                prev_matter_nos = prev_sheet.col_values(3)[1:]
+                                valid_numbers = [int(val.strip()) for val in prev_matter_nos if str(val).strip().isdigit()]
+                            except Exception:
+                                valid_numbers = [20260728] 
                     
-                    current_max_matter += 1
-                    new_matter_no = str(current_max_matter)
-                    next_index = target_row - 1
-                    today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
+                    current_max_matter = max(valid_numbers) if valid_numbers else 20260728
                     
-                    matter_type, clients, contacts, referral = extract_matter_data(doc_file)
+                    # --- 3. PROCESS EACH FILE IN THE BATCH ---
+                    for doc_file in uploaded_files:
+                        matter_nos = sheet.col_values(3) 
+                        max_num = -1
+                        max_row_index = 1 
+                        
+                        for idx, val in enumerate(matter_nos):
+                            clean_val = str(val).strip()
+                            if clean_val.isdigit():
+                                num = int(clean_val)
+                                if num > max_num:
+                                    max_num = num
+                                    max_row_index = idx + 1 
+                        
+                        if max_num == -1:
+                            target_row = 2
+                            if datetime.now().month == 1:
+                                current_max_matter = int(f"{CURRENT_YEAR}0000")
+                            else:
+                                current_max_matter = 20260728 
+                        else:
+                            target_row = max_row_index + 1
+                            current_max_matter = max_num
+                        
+                        current_max_matter += 1
+                        new_matter_no = str(current_max_matter)
+                        next_index = target_row - 1
+                        today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
+                        
+                        matter_type, clients, contacts, referral = extract_matter_data(doc_file)
+                        
+                        new_row = [
+                            next_index, today_date, new_matter_no, matter_type, 
+                            clients, contacts, referral, "Yes", ""
+                        ]
+                        
+                        cell_range = f"A{target_row}:I{target_row}"
+                        sheet.update(range_name=cell_range, values=[new_row])
+                        
+                        # Polished micro-feedback printed elegantly inside the box
+                        st.write(f"🔹 **{doc_file.name}** logged ➡️ Row {target_row} (Matter: {new_matter_no})")
                     
-                    new_row = [
-                        next_index, today_date, new_matter_no, matter_type, 
-                        clients, contacts, referral, "Yes", ""
-                    ]
-                    
-                    cell_range = f"A{target_row}:I{target_row}"
-                    sheet.update(range_name=cell_range, values=[new_row])
-                    
-                    st.success(f"✅ Loaded: {doc_file.name} ➡️ Row {target_row} (Matter No: {new_matter_no})")
-                    
-            # --- THE AUTOMATIC RESET TRICK ---
-            # Fire a sleek, persistent toast message that survives the rerun!
-            st.toast("🎉 Batch processed completely flawlessly!", icon="🚀")
-            st.balloons() # They will now pop off dynamically right before the fluid sync
-            
-            # Increment the uploader widget key so it clears out the files for the next run
-            st.session_state["uploader_key"] += 1
-            st.session_state["previous_files"] = []
-            
-            # A tiny delay so you can actually see the balloons fly up before the screen resets!
-            import time
-            time.sleep(1.5) 
-            st.rerun()
-
-        except Exception as e:
-
-        # --- THE AUTOMATIC RESET TRICK ---
-            # Automatically increments the uploader widget key so it clears out the files for the next batch run!
-            st.session_state["uploader_key"] += 1
-            st.session_state["previous_files"] = []
-            st.rerun()
-        
+                    # Smoothly collapse the container when the work is completely done
+                    status.update(label="🎉 Batch processing completed successfully!", state="complete", expanded=False)
+                
+                # Big celebration popoff drops immediately without frame drops!
+                st.balloons()
+                
+                # --- ASYNCHRONOUS AUTO-FLUSH KICKER ---
+                # Key shifts silently. The next action automatically starts fresh!
+                st.session_state["uploader_key"] += 1
+                st.session_state["previous_files"] = []
+                
         except Exception as e:
             st.error(f"Error executing automation batch processing: {e}")
