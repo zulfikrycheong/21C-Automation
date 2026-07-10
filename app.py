@@ -243,15 +243,32 @@ if uploaded_files:
                 
                 # --- 3. PROCESS EACH FILE IN THE BATCH ---
                 for doc_file in uploaded_files:
+                    # Recalculate the next available row slot freshly for each file
+                    date_opened_values = sheet.col_values(2) 
+                    target_row = 2
+                    while target_row <= len(date_opened_values) and date_opened_values[target_row - 1].strip() != "":
+                        target_row += 1
+                    
                     next_index = target_row - 1
                     today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
                     
-                    current_max_matter += 1
+                    # --- CRITICAL FIX: Freshly read the maximum number right now to prevent skipping ---
+                    try:
+                        matter_nos = sheet.col_values(3)[1:]  
+                        valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
+                    except Exception:
+                        valid_numbers = []
+                        
+                    # If current tab has no numbers yet, fall back to the smart engine logic
+                    if not valid_numbers:
+                        current_max_matter += 1
+                    else:
+                        current_max_matter = max(valid_numbers) + 1
+                        
                     new_matter_no = str(current_max_matter)
                     
                     matter_type, clients, contacts, referral = extract_matter_data(doc_file)
                     
-                    # The value structure matching Columns A through I
                     new_row = [
                         next_index,          # Column A: Column 1
                         today_date,          # Column B: Date Opened
@@ -261,10 +278,9 @@ if uploaded_files:
                         contacts,            # Column F: Contact(s)
                         referral,            # Column G: Referral
                         "Yes",               # Column H: Bill Paid (Yes/No)
-                        ""                   # Column I: Closed Date (Kept blank initially)
+                        ""                   # Column I: Closed Date
                     ]
                     
-                    # Expanded target range up to column I
                     cell_range = f"A{target_row}:I{target_row}"
                     sheet.update(range_name=cell_range, values=[new_row])
                     
