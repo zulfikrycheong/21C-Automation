@@ -155,15 +155,34 @@ if uploaded_files:
             with st.spinner(f"Processing batch of {len(uploaded_files)} files..."):
                 sheet = get_google_sheet()
                 
-                # Load sheet structures outside the loop to minimize API overhead
-                matter_nos = sheet.col_values(3)[1:]  
-                valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
-                current_max_matter = max(valid_numbers) if valid_numbers else 20260622
+                # --- INTELLIGENT MONTH-ROLLOVER NUMBER ENGINE ---
+                # 1. Try to read current month's matter numbers
+                try:
+                    matter_nos = sheet.col_values(3)[1:]  
+                    valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
+                except Exception:
+                    valid_numbers = []
                 
-                client_values = sheet.col_values(5) 
-                target_row = 2
-                while target_row <= len(client_values) and client_values[target_row - 1].strip() != "":
-                    target_row += 1
+                # 2. If current tab is empty, automatically look back at the previous month
+                if not valid_numbers:
+                    try:
+                        # Calculate the previous month's tab name dynamically
+                        from datetime import timedelta
+                        # Subtracting 15 days from the 1st of this month safely lands us in the previous month
+                        first_of_this_month = datetime.now().replace(day=1)
+                        prev_month_date = first_of_this_month - timedelta(days=15)
+                        PREV_SHEET_TAB_NAME = prev_month_date.strftime("%B %Y")
+                        
+                        # Open the previous month's tab to grab its final matter number
+                        client = gspread.authorize(creds)
+                        prev_sheet = client.open(GOOGLE_SHEET_NAME).worksheet(PREV_SHEET_TAB_NAME)
+                        prev_matter_nos = prev_sheet.col_values(3)[1:]
+                        valid_numbers = [int(val.strip()) for val in prev_matter_nos if str(val).strip().isdigit()]
+                    except Exception:
+                        # Fallback default if it's a brand new master sheet with no history at all
+                        valid_numbers = [20260622]
+                
+                current_max_matter = max(valid_numbers)
                 
                 # Process each file one by one in order
                 for doc_file in uploaded_files:
