@@ -286,15 +286,21 @@ if uploaded_files:
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
             
-            # 2. VISUAL ANCHOR: Lock a clean, solid completion banner on screen 
-            # This bridges the gap so the files staying in the bay looks 100% intentional!
-            st.success("🎉 **All matters have been successfully compiled and written to the master matrix!** Wiping upload bay for next batch...")
+            # 2. Add an empty placeholder container
+            placeholder = st.empty()
+            with placeholder.container():
+                st.success("🎉 **All matters have been successfully compiled and written to the master matrix!** Wiping upload bay for next batch...")
             
-            # 3. Let the balloons glide and give the user time to read the confirmation
+            # 3. Give the user a brief second to see the success message
             import time
-            time.sleep(2.0)
+            time.sleep(1.5)
             
-            # 4. Clean reload into a fresh workspace
+            # 4. UX SLEIGHT OF HAND: Wipe the banner right before the rerun!
+            # This makes the screen transition back to blank naturally while the balloons 
+            # are finishing, completely hiding the harsh, mechanical page reload.
+            placeholder.empty()
+            time.sleep(0.5)
+            
             st.rerun()
 
         except Exception as e:
