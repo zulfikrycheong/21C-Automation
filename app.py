@@ -280,13 +280,18 @@ if uploaded_files:
                     
                     st.success(f"✅ Loaded: {doc_file.name} ➡️ Row {target_row} (Matter No: {new_matter_no})")
                     
-            st.balloons()
-
-        # --- THE AUTOMATIC RESET TRICK ---
-            # Automatically increments the uploader widget key so it clears out the files for the next batch run!
+            # --- THE AUTOMATIC RESET TRICK ---
+            # Fire a sleek, persistent toast message that survives the rerun!
+            st.toast("🎉 Batch processed completely flawlessly!", icon="🚀")
+            st.balloons() # They will now pop off dynamically right before the fluid sync
+            
+            # Increment the uploader widget key so it clears out the files for the next run
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
+            
+            # A tiny delay so you can actually see the balloons fly up before the screen resets!
+            import time
+            time.sleep(1.5) 
             st.rerun()
-        
+
         except Exception as e:
-            st.error(f"Error executing automation batch processing: {e}")
