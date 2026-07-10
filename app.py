@@ -39,9 +39,33 @@ def get_google_sheet():
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         
     client = gspread.authorize(creds)
-    sheet = client.open(GOOGLE_SHEET_NAME).worksheet(SHEET_TAB_NAME)
+    workbook = client.open(GOOGLE_SHEET_NAME)
+    
+    try:
+        sheet = workbook.worksheet(SHEET_TAB_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        # --- THE AUTO-CANVAS GENERATOR ---
+        sheet = workbook.add_worksheet(title=SHEET_TAB_NAME, rows="1000", cols="26")
+        
+        # EXACT corporate headers from the master sheet layout
+        headers = [
+            "Column 1", 
+            "Date Opened", 
+            "Matter No", 
+            "Type of Work", 
+            "Client(s)", 
+            "Contact(s)", 
+            "Referral", 
+            "Bill Paid (Yes/No)", 
+            "Closed Date"
+        ]
+        
+        # Push headers to Row 1 and bold them officially
+        sheet.update(range_name="A1:I1", values=[headers])
+        sheet.format("A1:I1", {"textFormat": {"bold": True}})
+        
     return sheet
-
+    
 # --- 2. DOCX PARSING LOGIC ---
 def extract_matter_data(doc_path):
     doc = docx.Document(doc_path)
@@ -204,12 +228,21 @@ if uploaded_files:
                     
                     matter_type, clients, contacts, referral = extract_matter_data(doc_file)
                     
+                    # The value structure matching Columns A through I perfectly
                     new_row = [
-                        next_index, today_date, new_matter_no, matter_type, 
-                        clients, contacts, referral, "Yes"
+                        next_index,          # Column A: Column 1
+                        today_date,          # Column B: Date Opened
+                        new_matter_no,       # Column C: Matter No
+                        matter_type,         # Column D: Type of Work
+                        clients,             # Column E: Client(s)
+                        contacts,            # Column F: Contact(s)
+                        referral,            # Column G: Referral
+                        "Yes",               # Column H: Bill Paid (Yes/No)
+                        ""                   # Column I: Closed Date (Kept blank initially)
                     ]
                     
-                    cell_range = f"A{target_row}:H{target_row}"
+                    # Expanded target range up to column I
+                    cell_range = f"A{target_row}:I{target_row}"
                     sheet.update(range_name=cell_range, values=[new_row])
                     
                     st.success(f"✅ Loaded: {doc_file.name} ➡️ Row {target_row} (Matter No: {new_matter_no})")
