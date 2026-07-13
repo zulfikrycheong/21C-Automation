@@ -10,6 +10,9 @@ import json
 
 st.set_page_config(page_title="21 Chambers Client List", layout="centered")
 
+# --- FORCE SYSTEM RE-RENDER INSULATION ---
+st.markdown("", unsafe_allow_html=True)
+
 # --- UI INTERFACE GRAPHICS & LOGO ---
 if os.path.exists("Company Logo.png"):
     st.image("Company Logo.png", width=250)
@@ -122,10 +125,6 @@ def generate_print_html(matter_no, clients_text, contacts_text, matter_type, dat
             margin-top: 40pt;
             letter-spacing: 1px;
         }}
-        @media print {{
-            body {{ padding: 0; }}
-            .no-print {{ display: none; }}
-        }}
     </style>
     </head>
     <body>
@@ -204,21 +203,7 @@ def extract_matter_data(doc_path):
 with st.sidebar:
     st.image("Company Logo.png", use_container_width=True)  
     st.markdown("### 🛠️ Operation Logistics")
-    st.info("Dual-Stream Automation Panel")
-    st.markdown("---")
-    st.markdown("### 📋 System Access Email")
-    try:
-        if os.path.exists("credentials.json"):
-            with open("credentials.json", "r") as f:
-                sys_email = json.load(f).get("client_email", "Not found")
-        else:
-            creds_dict = json.loads(base64.b64decode(st.secrets["encoded_creds"]))
-            sys_email = creds_dict.get("client_email", "Not found")
-        st.code(sys_email, language="text")  
-    except Exception:
-        st.error("Access configuration unresolved.")
-
-st.markdown("---")
+    st.info("Dual-Stream Processing Node Active")
 
 # --- 4. RUNTIME SYSTEM STATES ---
 if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
@@ -226,7 +211,7 @@ if "previous_files" not in st.session_state: st.session_state["previous_files"] 
 if "processed_html_store" not in st.session_state: st.session_state["processed_html_store"] = {}
 
 uploaded_files = st.file_uploader(
-    "Drag and drop Open File Sheets (.docx) here", 
+    "Upload Intake Sheets (.docx)", 
     type=["docx"], accept_multiple_files=True, key=f"uploader_{st.session_state['uploader_key']}"
 )
 
@@ -235,85 +220,70 @@ if current_file_names != st.session_state["previous_files"]:
     st.session_state["previous_files"] = current_file_names
     st.session_state["processed_html_store"] = {}
 
-# --- 5. INTERACTIVE PRINT CONFIRMATION CONTROLS ---
+# --- 5. THE FAIL-SAFE QUEUE SYSTEM ---
 if uploaded_files:
     st.markdown("---")
-    st.subheader("🖨️ Production Queue Confirmation")
-    st.write("Documents staged. Would you like to initialize the dual-stream automation pipelines?")
+    st.subheader("🖨️ Form Pipeline Confirmation")
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("✅ YES - Execute Pipelines & View Covers", use_container_width=True, type="primary"):
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("✅ RUN AUTO-LOG & VIEW COVERS", use_container_width=True, type="primary"):
             if not st.session_state["processed_html_store"]:
-                with st.spinner("⚡ Syncing cloud matrix & generating layouts..."):
-                    sheet = get_google_sheet()
+                sheet = get_google_sheet()
+                try:
+                    vals = sheet.col_values(3)[1:]
+                    valid = [int(v.strip()) for v in vals if v.strip().isdigit()]
+                except:
+                    valid = []
+                current_max = max(valid) if valid else 20260728
+                
+                temp_store = {}
+                for f in uploaded_files:
+                    matter_nos = sheet.col_values(3)
+                    mx, mx_idx = -1, 1
+                    for idx, val in enumerate(matter_nos):
+                        if str(val).strip().isdigit() and int(str(val).strip()) > mx:
+                            mx = int(str(val).strip())
+                            mx_idx = idx + 1
                     
-                    try:
-                        matter_nos = sheet.col_values(3)[1:]  
-                        valid_numbers = [int(val.strip()) for val in matter_nos if str(val).strip().isdigit()]
-                    except Exception:
-                        valid_numbers = []
+                    target_row = mx_idx + 1 if mx != -1 else 2
+                    if mx != -1: current_max = mx
                     
-                    current_max_matter = max(valid_numbers) if valid_numbers else 20260728
+                    current_max += 1
+                    new_no = str(current_max)
+                    next_idx = target_row - 1
+                    t_date = datetime.now().strftime("%d %B %Y").lstrip("0")
                     
-                    temp_store = {}
-                    for doc_file in uploaded_files:
-                        matter_nos = sheet.col_values(3) 
-                        max_num = -1
-                        max_row_index = 1 
-                        for idx, val in enumerate(matter_nos):
-                            if str(val).strip().isdigit() and int(str(val).strip()) > max_num:
-                                max_num = int(str(val).strip())
-                                max_row_index = idx + 1 
-                        
-                        target_row = max_row_index + 1 if max_num != -1 else 2
-                        if max_num != -1: current_max_matter = max_num
-                        
-                        current_max_matter += 1
-                        new_matter_no = str(current_max_matter)
-                        next_index = target_row - 1
-                        today_date = datetime.now().strftime("%d %B %Y").lstrip("0")
-                        
-                        matter_type, clients, contacts, referral = extract_matter_data(doc_file)
-                        
-                        new_row = [next_index, today_date, new_matter_no, matter_type, clients, contacts, referral, "Yes", ""]
-                        sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
-                        
-                        # Stream 2: Form the native layout view block strings
-                        layout_html = generate_print_html(new_matter_no, clients, contacts, matter_type, today_date)
-                        temp_store[doc_file.name] = (new_matter_no, layout_html)
-                        st.toast(f"Synchronized Matrix Row {target_row}", icon="🔹")
-                        
-                    st.session_state["processed_html_store"] = temp_store
-                    st.balloons()
-            
-    with col2:
-        if st.button("❌ NO - Abort & Clear Workspace", use_container_width=True):
+                    m_type, cls, cnt, ref = extract_matter_data(f)
+                    new_row = [next_idx, t_date, new_no, m_type, cls, cnt, ref, "Yes", ""]
+                    sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
+                    
+                    html_view = generate_print_html(new_no, cls, cnt, m_type, t_date)
+                    temp_store[f.name] = (new_no, html_view)
+                    
+                st.session_state["processed_html_store"] = temp_store
+                st.balloons()
+                
+    with c2:
+        if st.button("❌ CANCEL & WIPE BAY", use_container_width=True):
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
             st.session_state["processed_html_store"] = {}
             st.rerun()
 
-# --- 6. DISPLAY VERIFIED PRINT CENTERS ---
+# --- 6. NATIVE WEB PRINT DISPATCHERS ---
 if st.session_state["processed_html_store"]:
     st.markdown("---")
-    st.success("🎉 **Data routing completely finalized. Review your templates below to print:**")
-    
-    for filename, (matter_no, layout_html) in st.session_state["processed_html_store"].items():
-        with st.expander(f"📄 Cover Sheet Template View (Matter No: {matter_no})", expanded=True):
-            # Renders beautifully in all browsers with absolute safety
-            st.components.v1.html(layout_html, height=650, scrolling=True)
+    for fname, (m_no, html_code) in st.session_state["processed_html_store"].items():
+        with st.expander(f"🖨️ COVER SHEET PRINT MODULE - MATTER {m_no}", expanded=True):
+            st.components.v1.html(html_code, height=650, scrolling=True)
             
-            # Use a super clean JavaScript injection print hook
-            b64_layout = base64.b64encode(layout_html.encode('utf-8')).decode('utf-8')
-            print_script = f"""
-                <a href="data:text/html;base64,{b64_layout}" target="_blank" 
-                   style="text-decoration: none;">
-                    <button style="width: 100%; background-color: #FF4B4B; color: white; border: none; 
-                                   padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer;">
-                        🖨️ Send Cover Sheet to System Printer App
+            b64 = base64.b64encode(html_code.encode('utf-8')).decode('utf-8')
+            print_button_script = f"""
+                <a href="data:text/html;base64,{b64}" target="_blank" style="text-decoration:none;">
+                    <button style="width:100%; background-color:#FF4B4B; color:white; border:none; padding:14px; font-size:16px; font-weight:bold; border-radius:8px; cursor:pointer;">
+                        🖨️ OPEN PRINT TAB FOR MATTER {m_no}
                     </button>
                 </a>
             """
-            st.components.v1.html(print_script, height=60)
+            st.components.v1.html(print_button_script, height=60)
