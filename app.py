@@ -10,7 +10,7 @@ import json
 import io
 
 # ReportLab core engine components for high-fidelity vector PDF generation
-from reportlab.lib.pagesizes import a4
+from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -60,7 +60,7 @@ def get_google_sheet():
 def generate_cover_pdf(matter_no, clients_text, contacts_text, matter_type, date_opened):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
-        buffer, pagesize=a4,
+        buffer, pagesize=A4,
         rightMargin=57.6, leftMargin=57.6, topMargin=57.6, bottomMargin=57.6
     )
     
@@ -86,7 +86,7 @@ def generate_cover_pdf(matter_no, clients_text, contacts_text, matter_type, date
     for line in contact_lines:
         top_box_elements.append(Paragraph(line, style_top_box))
         
-    printable_width = a4[0] - 115.2 
+    printable_width = A4[0] - 115.2 
     
     top_table = Table([[top_box_elements]], colWidths=[printable_width])
     top_table.setStyle(TableStyle([
