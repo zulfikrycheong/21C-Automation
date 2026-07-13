@@ -10,21 +10,11 @@ import json
 import io
 
 # ReportLab core engine components for high-fidelity vector PDF generation
-try:
-    from reportlab.lib.pagesizes import a4
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
-except ModuleNotFoundError:
-    import subprocess
-    import sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "reportlab"])
-    from reportlab.lib.pagesizes import a4
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import a4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
 
 # FORCE STREAMLIT TO RENDER IN FULL-WIDTH FLAT LAYOUT
 st.set_page_config(page_title="21 Chambers Client List", layout="wide")
