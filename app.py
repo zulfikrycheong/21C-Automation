@@ -9,14 +9,22 @@ import base64
 import json
 import io
 
-# We import the lightweight fpdf2 library directly inside the workspace
+# ReportLab core engine components for high-fidelity vector PDF generation
 try:
-    from fpdf import FPDF
+    from reportlab.lib.pagesizes import a4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
 except ModuleNotFoundError:
     import subprocess
     import sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "fpdf2"])
-    from fpdf import FPDF
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "reportlab"])
+    from reportlab.lib.pagesizes import a4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
 
 # FORCE STREAMLIT TO RENDER IN FULL-WIDTH FLAT LAYOUT
 st.set_page_config(page_title="21 Chambers Client List", layout="wide")
@@ -58,105 +66,80 @@ def get_google_sheet():
         sheet = duplicated_sheet
     return sheet
 
-# --- 2. VECTOR PDF BLUEPRINT GENERATOR (A4 Pixel-Perfect Replication) ---
-class CoverSheetPDF(FPDF):
-    def generate_cover(self, matter_no, clients, contacts, matter_type, date_opened):
-        self.add_page()
-        self.set_margins(20, 20, 20)
-        self.set_auto_page_break(False)
+# --- 2. VECTOR PDF BLUEPRINT GENERATOR ---
+def generate_cover_pdf(matter_no, clients_text, contacts_text, matter_type, date_opened):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=a4,
+        rightMargin=57.6, leftMargin=57.6, topMargin=57.6, bottomMargin=57.6
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    style_top_box = ParagraphStyle('TopBox', fontName='Helvetica', fontSize=13, leading=16)
+    style_top_box_bold = ParagraphStyle('TopBoxBold', fontName='Helvetica-Bold', fontSize=13, leading=16)
+    style_firm_title = ParagraphStyle('FirmTitle', fontName='Helvetica-Bold', fontSize=20, leading=24, alignment=TA_CENTER)
+    style_firm_body = ParagraphStyle('FirmBody', fontName='Helvetica', fontSize=13, leading=16, alignment=TA_CENTER)
+    style_matrix_lbl = ParagraphStyle('MatrixLbl', fontName='Helvetica-Bold', fontSize=13, leading=16)
+    style_matrix_val = ParagraphStyle('MatrixVal', fontName='Helvetica', fontSize=13, leading=16)
+    style_giant_foot = ParagraphStyle('GiantFoot', fontName='Helvetica-Bold', fontSize=76, leading=80, alignment=TA_CENTER)
+    
+    story = []
+    
+    client_lines = [line.strip() for line in clients_text.split('\n') if line.strip()]
+    contact_lines = [line.strip() for line in contacts_text.split('\n') if line.strip()]
+    
+    top_box_elements = []
+    for line in client_lines:
+        current_style = style_top_box_bold if ("APPLICANT" in line or "RESPONDENT" in line) else style_top_box
+        top_box_elements.append(Paragraph(line, current_style))
+    for line in contact_lines:
+        top_box_elements.append(Paragraph(line, style_top_box))
         
-        # Calculate clean width metrics
-        page_w = self.w - 40
-        
-        # Extract individual name profiles safely
-        client_lines = [line.strip() for line in clients.split('\n') if line.strip()]
-        contact_lines = [line.strip() for line in contacts.split('\n') if line.strip()]
-        
-        # A. TOP CONTAINER BOX (Calculate total inner text height dynamically)
-        self.set_font("Arial", size=13)
-        box_text_lines = client_lines + contact_lines
-        box_height = (len(box_text_lines) * 7) + 14
-        
-        # Draw the bounding rectangle outline
-        self.rect(20, 20, page_w, box_height)
-        self.set_xy(25, 25)
-        
-        for line in box_text_lines:
-            if "APPLICANT" in line or "RESPONDENT" in line:
-                self.set_font("Arial", "B", size=13)
-            else:
-                self.set_font("Arial", size=13)
-            self.cell(page_w - 10, 6, line, ln=True)
-            self.set_x(25)
-            
-        # Move system cursor past the box margin boundaries
-        self.set_y(20 + box_height + 25)
-        
-        # B. CENTRAL FIRM EMBLEM BLOCK
-        self.set_font("Arial", "B", size=20)
-        self.cell(page_w, 8, "21 CHAMBERS LLC", align="C", ln=True)
-        self.ln(2)
-        
-        self.set_font("Arial", size=13)
-        self.cell(page_w, 6, "2 HAVELOCK ROAD #06-17", align="C", ln=True)
-        self.cell(page_w, 6, "HAVELOCK 2", align="C", ln=True)
-        self.cell(page_w, 6, "SINGAPORE 059763", align="C", ln=True)
-        self.ln(2)
-        self.cell(page_w, 6, "TEL: 6224 1848       FAX: 6223 3092", align="C", ln=True)
-        self.ln(30)
-        
-        # C. CORE METADATA MATRIX GRID Table Mapping
-        clean_name = client_lines[0].replace("APPLICANT - ", "") if client_lines else "NIL"
-        subject_label = f"{matter_type} for {clean_name}"
-        
-        # Establish table widths at a sharp 25% / 75% geometric balance
-        col1_w = page_w * 0.25
-        col2_w = page_w * 0.75
-        
-        # Row 1: Subject Matter
-        self.set_font("Arial", "B", size=13)
-        self.cell(col1_w, 12, "SUBJECT MATTER", border=1)
-        self.set_font("Arial", size=13)
-        self.cell(col2_w, 12, f" {subject_label}", border=1, ln=True)
-        
-        # Row 2: File Tracking Metadata
-        self.set_font("Arial", "B", size=13)
-        # Store structural positioning to accommodate multi-line address blocks natively inside cells
-        start_x = self.get_x()
-        start_y = self.get_y()
-        self.cell(col1_w, 20, "FILE", border=1)
-        
-        self.set_xy(start_x + col1_w, start_y)
-        self.set_font("Arial", "B", size=13)
-        self.cell(col2_w, 20, "", border=1) # Outer cell bounding box
-        self.set_xy(start_x + col1_w + 2, start_y + 2)
-        self.cell(col2_w - 4, 5, matter_no, ln=True)
-        self.set_x(start_x + col1_w + 2)
-        self.set_font("Arial", size=13)
-        self.cell(col2_w - 4, 5, f"Opening date: {date_opened}", ln=True)
-        self.set_x(start_x + col1_w + 2)
-        self.cell(col2_w - 4, 5, "Closure date:", ln=True)
-        
-        self.set_xy(start_x, start_y + 20)
-        
-        # Row 3: Financial Fees
-        self.set_font("Arial", "B", size=13)
-        self.cell(col1_w, 12, "Legal Fee", border=1)
-        self.set_font("Arial", size=13)
-        self.cell(col2_w, 12, " CASH", border=1, ln=True)
-        
-        # Row 4: Remarks Blank Cell
-        self.set_font("Arial", "B", size=13)
-        self.cell(col1_w, 12, "Remarks", border=1)
-        self.set_font("Arial", size=13)
-        self.cell(col2_w, 12, "", border=1, ln=True)
-        self.ln(35)
-        
-        # D. GIANT FOOTER CODE TRACKING DISPLAY (Set to high-visibility bold scale)
-        self.set_font("Arial", "B", size=76)
-        self.cell(page_w, 25, matter_no, align="C", ln=True)
-        
-        return self.output()
+    printable_width = a4[0] - 115.2 
+    
+    top_table = Table([[top_box_elements]], colWidths=[printable_width])
+    top_table.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1.5, colors.black),
+        ('PADDING', (0,0), (-1,-1), 12),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+    ]))
+    story.append(top_table)
+    story.append(Spacer(1, 28))
+    
+    story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763", style_firm_body))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092", style_firm_body))
+    story.append(Spacer(1, 36))
+    
+    clean_name = client_lines[0].replace("APPLICANT - ", "") if client_lines else "NIL"
+    subject_label = f"{matter_type} for Estate of {clean_name}"
+    file_block_text = f"<b>{matter_no}</b><br/>Opening date: {date_opened}<br/>Closure date:"
+    
+    matrix_data = [
+        [Paragraph("SUBJECT MATTER", style_matrix_lbl), Paragraph(subject_label, style_matrix_val)],
+        [Paragraph("FILE", style_matrix_lbl), Paragraph(file_block_text, style_matrix_val)],
+        [Paragraph("Legal Fee", style_matrix_lbl), Paragraph("CASH", style_matrix_val)],
+        [Paragraph("Remarks", style_matrix_lbl), Paragraph("", style_matrix_val)]
+    ]
+    
+    matrix_table = Table(matrix_data, colWidths=[printable_width * 0.25, printable_width * 0.75])
+    matrix_table.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1.5, colors.black),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('PADDING', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+    ]))
+    story.append(matrix_table)
+    story.append(Spacer(1, 40))
+    
+    story.append(Paragraph(matter_no, style_giant_foot))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 # --- 3. RAW INPUT DOCX SCRAPING ENGINE ---
 def extract_matter_data(doc_path):
@@ -222,7 +205,6 @@ if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
 if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
 
-# Forced flat execution canvas area layout
 uploaded_files = st.file_uploader(
     "Drag and drop Open File Sheets (.docx) here", 
     type=["docx"], accept_multiple_files=True, key=f"uploader_{st.session_state['uploader_key']}"
@@ -272,14 +254,12 @@ if uploaded_files:
                         
                         m_type, cls, cnt, ref = extract_matter_data(f)
                         
-                        # Stream 1: Update the remote Google Sheets data cells
+                        # Stream 1: Update Google Sheets
                         new_row = [next_idx, t_date, new_no, m_type, cls, cnt, ref, "Yes", ""]
                         sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
                         
-                        # Stream 2: Render crisp vector PDF boundaries directly in server memory cache
-                        pdf_engine = CoverSheetPDF()
-                        pdf_output_bytes = pdf_engine.generate_cover(new_no, cls, cnt, m_type, t_date)
-                        
+                        # Stream 2: Render crisp vector PDF
+                        pdf_output_bytes = generate_cover_pdf(new_no, cls, cnt, m_type, t_date)
                         temp_store[f.name] = (new_no, pdf_output_bytes)
                         st.toast(f"Synchronized Case File Matrix: Matter {new_no}", icon="🔹")
                         
@@ -296,12 +276,11 @@ if uploaded_files:
 # --- 6. CRISP ARCHITECTURAL DOWNLOAD CONSOLES ---
 if st.session_state["pdf_binary_store"]:
     st.markdown("---")
-    st.success("🎉 **Data routing completely finalized. Action individual hardware print streams below:**")
+    st.success("🎉 **Data routing completely finalized. Download layout vectors to print:**")
     
     for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
-        # High-utility individual print module button row
         st.download_button(
-            label=f"🖨️ Open & Print Cover Sheet (Matter File Number: {m_no})",
+            label=f"🖨️ Save & Print Cover Sheet (Matter File Number: {m_no})",
             data=pdf_bytes,
             file_name=f"21Chambers_Cover_{m_no}.pdf",
             mime="application/pdf",
