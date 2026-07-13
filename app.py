@@ -14,7 +14,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 # FORCE STREAMLIT TO RENDER IN FULL-WIDTH FLAT LAYOUT
 st.set_page_config(page_title="21 Chambers Client List", layout="wide")
@@ -56,26 +56,33 @@ def get_google_sheet():
         sheet = duplicated_sheet
     return sheet
 
-# --- 2. VECTOR PDF BLUEPRINT GENERATOR ---
+# --- 2. VECTOR PDF BLUEPRINT GENERATOR (Exact Word Template Mirror) ---
 def generate_cover_pdf(matter_no, clients_text, contacts_text, matter_type, date_opened):
     buffer = io.BytesIO()
+    
+    # Establish dynamic A4 canvas profile with clean 0.8-inch operational margins
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
-        rightMargin=57.6, leftMargin=57.6, topMargin=57.6, bottomMargin=57.6
+        rightMargin=57.6, leftMargin=57.6, topMargin=40.0, bottomMargin=40.0
     )
     
     styles = getSampleStyleSheet()
     
-    style_top_box = ParagraphStyle('TopBox', fontName='Helvetica', fontSize=13, leading=16)
-    style_top_box_bold = ParagraphStyle('TopBoxBold', fontName='Helvetica-Bold', fontSize=13, leading=16)
-    style_firm_title = ParagraphStyle('FirmTitle', fontName='Helvetica-Bold', fontSize=20, leading=24, alignment=TA_CENTER)
-    style_firm_body = ParagraphStyle('FirmBody', fontName='Helvetica', fontSize=13, leading=16, alignment=TA_CENTER)
-    style_matrix_lbl = ParagraphStyle('MatrixLbl', fontName='Helvetica-Bold', fontSize=13, leading=16)
-    style_matrix_val = ParagraphStyle('MatrixVal', fontName='Helvetica', fontSize=13, leading=16)
+    # Custom high-fidelity typography mappings matching your specific physical sheet profile exactly
+    style_top_box = ParagraphStyle('TopBox', fontName='Helvetica', fontSize=14, leading=18)
+    style_top_box_bold = ParagraphStyle('TopBoxBold', fontName='Helvetica-Bold', fontSize=14, leading=18)
+    
+    style_firm_title = ParagraphStyle('FirmTitle', fontName='Helvetica-Bold', fontSize=22, leading=26, alignment=TA_CENTER)
+    style_firm_body = ParagraphStyle('FirmBody', fontName='Helvetica', fontSize=14, leading=18, alignment=TA_CENTER)
+    
+    style_matrix_lbl = ParagraphStyle('MatrixLbl', fontName='Helvetica-Bold', fontSize=13, leading=16, alignment=TA_LEFT)
+    style_matrix_val = ParagraphStyle('MatrixVal', fontName='Helvetica', fontSize=13, leading=16, alignment=TA_LEFT)
+    
     style_giant_foot = ParagraphStyle('GiantFoot', fontName='Helvetica-Bold', fontSize=76, leading=80, alignment=TA_CENTER)
     
     story = []
     
+    # A. TOP CONTAINER BOX BORDER REPLICATION
     client_lines = [line.strip() for line in clients_text.split('\n') if line.strip()]
     contact_lines = [line.strip() for line in contacts_text.split('\n') if line.strip()]
     
@@ -88,22 +95,28 @@ def generate_cover_pdf(matter_no, clients_text, contacts_text, matter_type, date
         
     printable_width = A4[0] - 115.2 
     
-    top_table = Table([[top_box_elements]], colWidths=[printable_width])
+    # Wrap text objects into a solid, multi-row table cell to draw custom outer borders cleanly
+    top_table_data = [[el] for el in top_box_elements]
+    top_table = Table(top_table_data, colWidths=[printable_width])
     top_table.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1.5, colors.black),
-        ('PADDING', (0,0), (-1,-1), 12),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+        ('BOX', (0,0), (-1,-1), 1.5, colors.black), # Fix: Explicit outer border box line definition
+        ('TOPPADDING', (0,0), (-1,0), 12),
+        ('BOTTOMPADDING', (0,-1), (-1,-1), 12),
+        ('LEFTPADDING', (0,0), (-1,-1), 14),
+        ('RIGHTPADDING', (0,0), (-1,-1), 14),
     ]))
     story.append(top_table)
-    story.append(Spacer(1, 28))
+    story.append(Spacer(1, 30))
     
+    # B. CENTRAL FIRM SIGNATURE BLOCK
     story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
     story.append(Spacer(1, 4))
     story.append(Paragraph("2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763", style_firm_body))
     story.append(Spacer(1, 4))
     story.append(Paragraph("TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092", style_firm_body))
-    story.append(Spacer(1, 36))
+    story.append(Spacer(1, 40))
     
+    # C. CORE METADATA MATRIX TABLE (Widened left label column to avoid broken vertical text wrap)
     clean_name = client_lines[0].replace("APPLICANT - ", "") if client_lines else "NIL"
     subject_label = f"{matter_type} for Estate of {clean_name}"
     file_block_text = f"<b>{matter_no}</b><br/>Opening date: {date_opened}<br/>Closure date:"
@@ -115,16 +128,18 @@ def generate_cover_pdf(matter_no, clients_text, contacts_text, matter_type, date
         [Paragraph("Remarks", style_matrix_lbl), Paragraph("", style_matrix_val)]
     ]
     
-    matrix_table = Table(matrix_data, colWidths=[printable_width * 0.25, printable_width * 0.75])
+    # Set left label width to a massive 150 points to guarantee no vertical text crushing
+    matrix_table = Table(matrix_data, colWidths=[150, printable_width - 150])
     matrix_table.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1.5, colors.black),
+        ('GRID', (0,0), (-1,-1), 1.5, colors.black), # Fix: Strong grid lines inside the cells
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('PADDING', (0,0), (-1,-1), 10),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10),
     ]))
     story.append(matrix_table)
-    story.append(Spacer(1, 40))
+    story.append(Spacer(1, 45))
     
+    # D. GIANT FOOTER CODE TRACKING DISPLAY
     story.append(Paragraph(matter_no, style_giant_foot))
     
     doc.build(story)
