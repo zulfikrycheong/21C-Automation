@@ -7,18 +7,26 @@ from google.oauth2.service_account import Credentials
 import os
 import base64
 import json
+import io
 
-st.set_page_config(page_title="21 Chambers Client List", layout="centered")
+# We import the lightweight fpdf2 library directly inside the workspace
+try:
+    from fpdf import FPDF
+except ModuleNotFoundError:
+    import subprocess
+    import sys
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "fpdf2"])
+    from fpdf import FPDF
 
-# --- FORCE SYSTEM RE-RENDER INSULATION ---
-st.markdown("", unsafe_allow_html=True)
+# FORCE STREAMLIT TO RENDER IN FULL-WIDTH FLAT LAYOUT
+st.set_page_config(page_title="21 Chambers Client List", layout="wide")
 
 # --- UI INTERFACE GRAPHICS & LOGO ---
 if os.path.exists("Company Logo.png"):
     st.image("Company Logo.png", width=250)
 
 st.title("📂 21 Chambers Automator")
-st.markdown("##### *Dual-Stream Intake Pipeline & Native Print Center*")
+st.markdown("##### *Dual-Stream Intake Pipeline & Native Vector PDF Center*")
 st.write("Drag and drop your document below to synchronize the master matrix and prepare print layouts.")
 st.markdown("---")
 
@@ -50,101 +58,105 @@ def get_google_sheet():
         sheet = duplicated_sheet
     return sheet
 
-# --- 2. HIGH-FIDELITY HTML/CSS COVER GENERATOR ---
-def generate_print_html(matter_no, clients_text, contacts_text, matter_type, date_opened):
-    client_lines = [line.strip() for line in clients_text.split('\n') if line.strip()]
-    contact_lines = [line.strip() for line in contacts_text.split('\n') if line.strip()]
-    
-    top_box_content = ""
-    for line in client_lines:
-        if "APPLICANT" in line or "RESPONDENT" in line:
-            top_box_content += f"<div style='font-weight: bold;'>{line}</div>"
-        else:
-            top_box_content += f"<div>{line}</div>"
-    for line in contact_lines:
-        top_box_content += f"<div>{line}</div>"
+# --- 2. VECTOR PDF BLUEPRINT GENERATOR (A4 Pixel-Perfect Replication) ---
+class CoverSheetPDF(FPDF):
+    def generate_cover(self, matter_no, clients, contacts, matter_type, date_opened):
+        self.add_page()
+        self.set_margins(20, 20, 20)
+        self.set_auto_page_break(False)
         
-    subject_label = "GLA for Estate of ..."
-    if client_lines:
-        clean_name = client_lines[0].replace("APPLICANT - ", "")
+        # Calculate clean width metrics
+        page_w = self.w - 40
+        
+        # Extract individual name profiles safely
+        client_lines = [line.strip() for line in clients.split('\n') if line.strip()]
+        contact_lines = [line.strip() for line in contacts.split('\n') if line.strip()]
+        
+        # A. TOP CONTAINER BOX (Calculate total inner text height dynamically)
+        self.set_font("Arial", size=13)
+        box_text_lines = client_lines + contact_lines
+        box_height = (len(box_text_lines) * 7) + 14
+        
+        # Draw the bounding rectangle outline
+        self.rect(20, 20, page_w, box_height)
+        self.set_xy(25, 25)
+        
+        for line in box_text_lines:
+            if "APPLICANT" in line or "RESPONDENT" in line:
+                self.set_font("Arial", "B", size=13)
+            else:
+                self.set_font("Arial", size=13)
+            self.cell(page_w - 10, 6, line, ln=True)
+            self.set_x(25)
+            
+        # Move system cursor past the box margin boundaries
+        self.set_y(20 + box_height + 25)
+        
+        # B. CENTRAL FIRM EMBLEM BLOCK
+        self.set_font("Arial", "B", size=20)
+        self.cell(page_w, 8, "21 CHAMBERS LLC", align="C", ln=True)
+        self.ln(2)
+        
+        self.set_font("Arial", size=13)
+        self.cell(page_w, 6, "2 HAVELOCK ROAD #06-17", align="C", ln=True)
+        self.cell(page_w, 6, "HAVELOCK 2", align="C", ln=True)
+        self.cell(page_w, 6, "SINGAPORE 059763", align="C", ln=True)
+        self.ln(2)
+        self.cell(page_w, 6, "TEL: 6224 1848       FAX: 6223 3092", align="C", ln=True)
+        self.ln(30)
+        
+        # C. CORE METADATA MATRIX GRID Table Mapping
+        clean_name = client_lines[0].replace("APPLICANT - ", "") if client_lines else "NIL"
         subject_label = f"{matter_type} for {clean_name}"
-
-    html_layout = f"""
-    <html>
-    <head>
-    <style>
-        body {{
-            font-family: 'Arial', 'Calibri', sans-serif;
-            color: #000000;
-            line-height: 1.25;
-            font-size: 13pt;
-            background-color: #ffffff;
-            padding: 20px;
-        }}
-        .top-box {{
-            border: 1.5px solid #000000;
-            padding: 14px;
-            margin-bottom: 28pt;
-        }}
-        .center-text {{
-            text-align: center;
-        }}
-        .firm-header {{
-            margin-bottom: 36pt;
-        }}
-        .firm-title {{
-            font-size: 20pt;
-            font-weight: bold;
-            margin-bottom: 4pt;
-            letter-spacing: 0.5px;
-        }}
-        .firm-body {{
-            font-size: 13pt;
-            margin-bottom: 4pt;
-        }}
-        table.matrix-table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 48pt;
-        }}
-        table.matrix-table td {{
-            border: 1.5px solid #000000;
-            padding: 10px;
-            vertical-align: top;
-            font-size: 13pt;
-            color: #000000;
-        }}
-        table.matrix-table td.label {{
-            font-weight: bold;
-            width: 25%;
-        }}
-        .giant-footer {{
-            font-size: 76pt;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 40pt;
-            letter-spacing: 1px;
-        }}
-    </style>
-    </head>
-    <body>
-        <div class="top-box">{top_box_content}</div>
-        <div class="center-text firm-header">
-            <div class="firm-title">21 CHAMBERS LLC</div>
-            <div class="firm-body">2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763</div>
-            <div class="firm-body">TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092</div>
-        </div>
-        <table class="matrix-table">
-            <tr><td class="label">SUBJECT MATTER</td><td>{subject_label}</td></tr>
-            <tr><td class="label">FILE</td><td><strong>{matter_no}</strong><br/>Opening date: {date_opened}<br/>Closure date:</td></tr>
-            <tr><td class="label">Legal Fee</td><td>CASH</td></tr>
-            <tr><td class="label">Remarks</td><td></td></tr>
-        </table>
-        <div class="giant-footer">{matter_no}</div>
-    </body>
-    </html>
-    """
-    return html_layout
+        
+        # Establish table widths at a sharp 25% / 75% geometric balance
+        col1_w = page_w * 0.25
+        col2_w = page_w * 0.75
+        
+        # Row 1: Subject Matter
+        self.set_font("Arial", "B", size=13)
+        self.cell(col1_w, 12, "SUBJECT MATTER", border=1)
+        self.set_font("Arial", size=13)
+        self.cell(col2_w, 12, f" {subject_label}", border=1, ln=True)
+        
+        # Row 2: File Tracking Metadata
+        self.set_font("Arial", "B", size=13)
+        # Store structural positioning to accommodate multi-line address blocks natively inside cells
+        start_x = self.get_x()
+        start_y = self.get_y()
+        self.cell(col1_w, 20, "FILE", border=1)
+        
+        self.set_xy(start_x + col1_w, start_y)
+        self.set_font("Arial", "B", size=13)
+        self.cell(col2_w, 20, "", border=1) # Outer cell bounding box
+        self.set_xy(start_x + col1_w + 2, start_y + 2)
+        self.cell(col2_w - 4, 5, matter_no, ln=True)
+        self.set_x(start_x + col1_w + 2)
+        self.set_font("Arial", size=13)
+        self.cell(col2_w - 4, 5, f"Opening date: {date_opened}", ln=True)
+        self.set_x(start_x + col1_w + 2)
+        self.cell(col2_w - 4, 5, "Closure date:", ln=True)
+        
+        self.set_xy(start_x, start_y + 20)
+        
+        # Row 3: Financial Fees
+        self.set_font("Arial", "B", size=13)
+        self.cell(col1_w, 12, "Legal Fee", border=1)
+        self.set_font("Arial", size=13)
+        self.cell(col2_w, 12, " CASH", border=1, ln=True)
+        
+        # Row 4: Remarks Blank Cell
+        self.set_font("Arial", "B", size=13)
+        self.cell(col1_w, 12, "Remarks", border=1)
+        self.set_font("Arial", size=13)
+        self.cell(col2_w, 12, "", border=1, ln=True)
+        self.ln(35)
+        
+        # D. GIANT FOOTER CODE TRACKING DISPLAY (Set to high-visibility bold scale)
+        self.set_font("Arial", "B", size=76)
+        self.cell(page_w, 25, matter_no, align="C", ln=True)
+        
+        return self.output()
 
 # --- 3. RAW INPUT DOCX SCRAPING ENGINE ---
 def extract_matter_data(doc_path):
@@ -199,91 +211,99 @@ def extract_matter_data(doc_path):
             
     return matter_type, clients_field, contacts_field, referral
 
-# --- SIDEBAR ACCESS PANEL CONTROL ---
+# --- SIDEBAR ACCESS CONTROL PANEL ---
 with st.sidebar:
     st.image("Company Logo.png", use_container_width=True)  
     st.markdown("### 🛠️ Operation Logistics")
-    st.info("Dual-Stream Processing Node Active")
+    st.info("Full-Width Dual Stream Core Engine Active.")
 
-# --- 4. RUNTIME SYSTEM STATES ---
+# --- 4. RUNTIME SYSTEM CONFIGURATIONS ---
 if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
-if "processed_html_store" not in st.session_state: st.session_state["processed_html_store"] = {}
+if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
 
+# Forced flat execution canvas area layout
 uploaded_files = st.file_uploader(
-    "Upload Intake Sheets (.docx)", 
+    "Drag and drop Open File Sheets (.docx) here", 
     type=["docx"], accept_multiple_files=True, key=f"uploader_{st.session_state['uploader_key']}"
 )
 
 current_file_names = [f.name for f in uploaded_files] if uploaded_files else []
 if current_file_names != st.session_state["previous_files"]:
     st.session_state["previous_files"] = current_file_names
-    st.session_state["processed_html_store"] = {}
+    st.session_state["pdf_binary_store"] = {}
 
-# --- 5. THE FAIL-SAFE QUEUE SYSTEM ---
+# --- 5. THE FAIL-SAFE PRODUCTION BAY QUEUE ---
 if uploaded_files:
     st.markdown("---")
-    st.subheader("🖨️ Form Pipeline Confirmation")
+    st.subheader("🖨️ Production Queue Confirmation")
+    st.write("Documents read successfully. Sync data matrix rows and prepare physical print layouts?")
     
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("✅ RUN AUTO-LOG & VIEW COVERS", use_container_width=True, type="primary"):
-            if not st.session_state["processed_html_store"]:
-                sheet = get_google_sheet()
-                try:
-                    vals = sheet.col_values(3)[1:]
-                    valid = [int(v.strip()) for v in vals if v.strip().isdigit()]
-                except:
-                    valid = []
-                current_max = max(valid) if valid else 20260728
-                
-                temp_store = {}
-                for f in uploaded_files:
-                    matter_nos = sheet.col_values(3)
-                    mx, mx_idx = -1, 1
-                    for idx, val in enumerate(matter_nos):
-                        if str(val).strip().isdigit() and int(str(val).strip()) > mx:
-                            mx = int(str(val).strip())
-                            mx_idx = idx + 1
+        if st.button("✅ YES - Execute Streams & Generate Layouts", use_container_width=True, type="primary"):
+            if not st.session_state["pdf_binary_store"]:
+                with st.spinner("⚡ Processing dual data arrays..."):
+                    sheet = get_google_sheet()
                     
-                    target_row = mx_idx + 1 if mx != -1 else 2
-                    if mx != -1: current_max = mx
+                    try:
+                        vals = sheet.col_values(3)[1:]
+                        valid = [int(v.strip()) for v in vals if v.strip().isdigit()]
+                    except:
+                        valid = []
+                    current_max = max(valid) if valid else 20260728
                     
-                    current_max += 1
-                    new_no = str(current_max)
-                    next_idx = target_row - 1
-                    t_date = datetime.now().strftime("%d %B %Y").lstrip("0")
+                    temp_store = {}
+                    for f in uploaded_files:
+                        matter_nos = sheet.col_values(3)
+                        mx, mx_idx = -1, 1
+                        for idx, val in enumerate(matter_nos):
+                            if str(val).strip().isdigit() and int(str(val).strip()) > mx:
+                                mx = int(str(val).strip())
+                                mx_idx = idx + 1
+                        
+                        target_row = mx_idx + 1 if mx != -1 else 2
+                        if mx != -1: current_max = mx
+                        
+                        current_max += 1
+                        new_no = str(current_max)
+                        next_idx = target_row - 1
+                        t_date = datetime.now().strftime("%d %B %Y").lstrip("0")
+                        
+                        m_type, cls, cnt, ref = extract_matter_data(f)
+                        
+                        # Stream 1: Update the remote Google Sheets data cells
+                        new_row = [next_idx, t_date, new_no, m_type, cls, cnt, ref, "Yes", ""]
+                        sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
+                        
+                        # Stream 2: Render crisp vector PDF boundaries directly in server memory cache
+                        pdf_engine = CoverSheetPDF()
+                        pdf_output_bytes = pdf_engine.generate_cover(new_no, cls, cnt, m_type, t_date)
+                        
+                        temp_store[f.name] = (new_no, pdf_output_bytes)
+                        st.toast(f"Synchronized Case File Matrix: Matter {new_no}", icon="🔹")
+                        
+                    st.session_state["pdf_binary_store"] = temp_store
+                    st.balloons()
                     
-                    m_type, cls, cnt, ref = extract_matter_data(f)
-                    new_row = [next_idx, t_date, new_no, m_type, cls, cnt, ref, "Yes", ""]
-                    sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
-                    
-                    html_view = generate_print_html(new_no, cls, cnt, m_type, t_date)
-                    temp_store[f.name] = (new_no, html_view)
-                    
-                st.session_state["processed_html_store"] = temp_store
-                st.balloons()
-                
     with c2:
-        if st.button("❌ CANCEL & WIPE BAY", use_container_width=True):
+        if st.button("❌ NO - Abort Operational Batch", use_container_width=True):
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
-            st.session_state["processed_html_store"] = {}
+            st.session_state["pdf_binary_store"] = {}
             st.rerun()
 
-# --- 6. NATIVE WEB PRINT DISPATCHERS ---
-if st.session_state["processed_html_store"]:
+# --- 6. CRISP ARCHITECTURAL DOWNLOAD CONSOLES ---
+if st.session_state["pdf_binary_store"]:
     st.markdown("---")
-    for fname, (m_no, html_code) in st.session_state["processed_html_store"].items():
-        with st.expander(f"🖨️ COVER SHEET PRINT MODULE - MATTER {m_no}", expanded=True):
-            st.components.v1.html(html_code, height=650, scrolling=True)
-            
-            b64 = base64.b64encode(html_code.encode('utf-8')).decode('utf-8')
-            print_button_script = f"""
-                <a href="data:text/html;base64,{b64}" target="_blank" style="text-decoration:none;">
-                    <button style="width:100%; background-color:#FF4B4B; color:white; border:none; padding:14px; font-size:16px; font-weight:bold; border-radius:8px; cursor:pointer;">
-                        🖨️ OPEN PRINT TAB FOR MATTER {m_no}
-                    </button>
-                </a>
-            """
-            st.components.v1.html(print_button_script, height=60)
+    st.success("🎉 **Data routing completely finalized. Action individual hardware print streams below:**")
+    
+    for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
+        # High-utility individual print module button row
+        st.download_button(
+            label=f"🖨️ Open & Print Cover Sheet (Matter File Number: {m_no})",
+            data=pdf_bytes,
+            file_name=f"21Chambers_Cover_{m_no}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
