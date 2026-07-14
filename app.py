@@ -225,14 +225,21 @@ if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
 if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
 
-# Inject custom theme styles to massively increase the drop zone box padding
+# Fixed CSS: Massively scales the drop zone while respecting Dark Mode typography
 st.markdown("""
     <style>
-        /* Target the internal file uploader drag area box footprint */
+        /* Expands the target footprint area */
         [data-testid="stFileUploaderDropzone"] {
-            padding: 5rem 3rem !important;
+            padding: 6rem 3rem !important;
             border-radius: 12px !important;
-            background-color: #f8f9fa !important;
+            background-color: #1e222b !important; /* Dark sleek widget background */
+            border: 2px dashed #4b5563 !important; /* Defined tracking border */
+        }
+        
+        /* Forces the text labels to pop out in clean white/light gray */
+        [data-testid="stFileUploaderDropzone"] label, 
+        [data-testid="stFileUploaderDropzone"] div {
+            color: #ffffff !important;
         }
     </style>
 """, unsafe_allow_html=True)
