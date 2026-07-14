@@ -186,11 +186,13 @@ def extract_matter_data(doc_path):
     elif "variation" in full_text.lower(): matter_type = "Variation"
     else: matter_type = "Others"
     
-    app_match = re.search(r"Applicant\s*–\s*([^,\n\d]+)", full_text, re.IGNORECASE)
-    res_match = re.search(r"Respondent\s*–\s*([^–,\n\d]+)", full_text, re.IGNORECASE)
+    # FIX: Swapped [^,\n\d] for [^\n\d] so commas are safely included in the name array!
+    app_match = re.search(r"Applicant\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
+    res_match = re.search(r"Respondent\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
     
     applicant = "APPLICANT - NIL"
     if app_match:
+        # Strip trailing cleanups safely
         clean_app = re.split(r"\s*[-\s–]\s*upload", app_match.group(1), flags=re.IGNORECASE)[0]
         applicant = f"APPLICANT - {clean_app.strip().upper()}"
         
