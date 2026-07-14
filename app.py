@@ -1,9 +1,5 @@
 import streamlit as st
 import docx
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
 import re
 from datetime import datetime
 import gspread
@@ -13,18 +9,25 @@ import base64
 import json
 import io
 
-# Enforce clean full-width canvas workspace view
+# ReportLab layout framework components
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+# Force clean full-width canvas layout workspace view
 st.set_page_config(page_title="21 Chambers Client List", layout="wide")
 
 if os.path.exists("Company Logo.png"):
     st.image("Company Logo.png", width=250)
 
 st.title("📂 21 Chambers Automator")
-st.markdown("##### *Dual-Stream Intake Pipeline & Native Word Document Center*")
-st.write("Drag and drop your document below to synchronize the master matrix and prepare perfect physical templates.")
+st.markdown("##### *Dual-Stream Intake Pipeline & Native Vector PDF Center*")
+st.write("Drag and drop your document below to synchronize the master matrix and download print-ready layouts.")
 st.markdown("---")
 
-# --- 1. GOOGLE SHEETS CORE CONNECTION ---
+# --- 1. GOOGLE SHEETS MATRIX SYNC ---
 GOOGLE_SHEET_NAME = "Lazy Automation"  
 SHEET_TAB_NAME = datetime.now().strftime("%B %Y")
 CURRENT_YEAR = datetime.now().strftime("%Y")
@@ -51,159 +54,114 @@ def get_google_sheet():
         )
     return sheet
 
-# --- 2. THE XML ELEMENT INJECTORS FOR CELL PADDING ---
-def create_element(name):
-    return OxmlElement(name)
-
-def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
-    tc = cell._tc
-    tcPr = tc.get_or_add_tcPr()
-    tcMar = create_element('w:tcMar')
-    for m, val in [('top', top), ('bottom', bottom), ('left', left), ('right', right)]:
-        node = create_element(f'w:{m}')
-        node.set(qn('w:w'), str(val))
-        node.set(qn('w:type'), 'dxa')
-        tcMar.append(node)
-    tcPr.append(tcMar)
-
-# --- 3. THE HIGH-FIDELITY COVER GENERATOR ENGINE ---
-def generate_perfect_docx(matter_no, clients_text, contacts_text, matter_type, date_opened):
-    doc = docx.Document()
+# --- 2. HIGH-FIDELITY VECTOR PDF ENGINE (Exact Dissection Translation) ---
+def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, date_opened):
+    buffer = io.BytesIO()
     
-    # Page Setup: A4 parameters mapped to your exact specifications
-    for section in doc.sections:
-        section.page_width = Inches(8.27)
-        section.page_height = Inches(11.69)
-        section.top_margin = Inches(0.5)
-        section.bottom_margin = Inches(0.5)
-        section.left_margin = Inches(0.295)
-        section.right_margin = Inches(0.295)
-
-    # 🏢 TOP TABLE: Spacer & Party/Firm Details
-    top_table = doc.add_table(rows=1, cols=2)
-    top_table.autofit = False
-    top_table.columns[0].width = Inches(1.333)
-    top_table.columns[1].width = Inches(6.346)
-    
-    row_1 = top_table.rows[0]
-    row_1.height = Inches(1.567)
-    
-    row_1.cells[0].width = Inches(1.333)
-    cell_b1 = row_1.cells[1]
-    cell_b1.width = Inches(6.346)
-    set_cell_margins(cell_b1, top=0, bottom=0, left=100, right=0)
-    
-    p_parties = cell_b1.paragraphs[0]
-    p_parties.paragraph_format.line_spacing = 1.15
-    p_parties.paragraph_format.space_after = Pt(0)
-    
-    # Build text flows matching your extraction rules
-    lines_list = [l.strip() for l in clients_text.split('\n') if l.strip()]
-    app_str = lines_list[0] if len(lines_list) > 0 else "APPLICANT - NIL"
-    res_str = lines_list[1] if len(lines_list) > 1 else "RESPONDENT - NIL"
-    
-    run_app = p_parties.add_run(f"{app_str}\n")
-    run_app.font.name = 'Times New Roman'
-    run_app.font.size = Pt(20)
-    
-    # Process and clean contacts field list for presentation display
-    contact_lines = [c.strip() for c in contacts_text.split('\n') if c.strip()]
-    for c_line in contact_lines:
-        run_c = p_parties.add_run(f"{c_line}\n")
-        run_c.font.name = 'Times New Roman'
-        run_c.font.size = Pt(20)
-        
-    p_parties.add_run("\n") # Target empty paragraph spacer gap
-    
-    run_res = p_parties.add_run(f"{res_str}\n")
-    run_res.font.name = 'Times New Roman'
-    run_res.font.size = Pt(20)
-    
-    # Append the contacts directly mapped underneath the respondent profile block
-    p_firm = cell_b1.add_paragraph()
-    p_firm.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_firm.paragraph_format.line_spacing = 1.0
-    p_firm.paragraph_format.space_before = Pt(24)
-    p_firm.paragraph_format.space_after = Pt(24)
-    
-    run_firm_name = p_firm.add_run("21 CHAMBERS LLC\n")
-    run_firm_name.font.name = 'Times New Roman'
-    run_firm_name.font.size = Pt(20)
-    run_firm_name.bold = True
-    
-    run_firm_addr = p_firm.add_run(
-        "2 HAVELOCK ROAD #06-17\n"
-        "HAVELOCK 2\n"
-        "SINGAPORE 059763\n"
-        "TEL: 6224 1848     FAX: 6223 3092"
+    # 📐 Page Setup Translation: A4 with exact 0.295" left/right margins (21.24 points)
+    # Top/Bottom set to 0.5" (36 points)
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=21.24, rightMargin=21.24,
+        topMargin=36.0, bottomMargin=36.0
     )
-    run_firm_addr.font.name = 'Times New Roman'
-    run_firm_addr.font.size = Pt(20)
-
+    
+    # Calculate available printable horizontal canvas space
+    printable_width = A4[0] - 42.48 # Total page width minus left/right margins
+    
+    # Custom Typography Style Profiles matching your 20pt Times New Roman spec sheet
+    style_normal_20 = ParagraphStyle('Norm20', fontName='Times-Roman', fontSize=20, leading=24, alignment=TA_LEFT)
+    style_bold_20 = ParagraphStyle('Bold20', fontName='Times-Bold', fontSize=20, leading=24, alignment=TA_LEFT)
+    style_firm_title = ParagraphStyle('FirmTitle', fontName='Times-Bold', fontSize=20, leading=24, alignment=TA_CENTER)
+    style_firm_body = ParagraphStyle('FirmBody', fontName='Times-Roman', fontSize=20, leading=24, alignment=TA_CENTER)
+    
+    # 🤯 The Mega Signpost Footer Style (Arial Bold 109pt)
+    style_giant_foot = ParagraphStyle('GiantFoot', fontName='Helvetica-Bold', fontSize=109, leading=115, alignment=TA_CENTER)
+    
+    story = []
+    
+    # ----------------------------------------------------
+    # 🏢 TOP TABLE: Spacer & Party/Firm Details
+    # ----------------------------------------------------
+    client_lines = [line.strip() for line in clients_text.split('\n') if line.strip()]
+    contact_lines = [line.strip() for line in contacts_text.split('\n') if line.strip()]
+    
+    right_cell_elements = []
+    for line in client_lines:
+        right_cell_elements.append(Paragraph(line, style_normal_20))
+    for line in contact_lines:
+        right_cell_elements.append(Paragraph(line, style_normal_20))
+        
+    # Firm Letterhead Block centered within the right cell layout flow
+    right_cell_elements.append(Spacer(1, 24))
+    right_cell_elements.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
+    right_cell_elements.append(Spacer(1, 4))
+    right_cell_elements.append(Paragraph("2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763", style_firm_body))
+    right_cell_elements.append(Spacer(1, 4))
+    right_cell_elements.append(Paragraph("TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092", style_firm_body))
+    
+    # Columns: Left Spacer (1.333") vs Right Info Cell (6.346") converted to layout points
+    col_w_left = 1.333 * 72
+    col_w_right = 6.346 * 72
+    
+    top_table = Table([["", right_cell_elements]], colWidths=[col_w_left, col_w_right], rowHeights=[1.567 * 72])
+    top_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LEFTPADDING', (1,0), (1,0), 7.2), # Exact 100 dxa left margin padding
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(top_table)
+    story.append(Spacer(1, 20))
+    
+    # ----------------------------------------------------
     # 📉 BOTTOM TABLE: Matter Specifications Matrix
-    bottom_table = doc.add_table(rows=4, cols=2)
-    bottom_table.autofit = False
-    bottom_table.columns[0].width = Inches(1.596)
-    bottom_table.columns[1].width = Inches(6.083)
-    
-    row_heights = [Inches(0.792), Inches(1.133), Inches(0.208), Inches(0.208)]
-    
-    # Map label options dynamically matching the exact parsed case metrics
+    # ----------------------------------------------------
     full_matter_name = "Uncontested Divorce"
     if matter_type == "CD": full_matter_name = "Contested Divorce"
     elif matter_type == "Annulment": full_matter_name = "Annulment"
     elif matter_type == "Variation": full_matter_name = "Variation"
     elif matter_type == "Others": full_matter_name = "Others"
 
-    row_data = [
-        {"label": "SUBJECT\nMATTER", "value": full_matter_name, "bold_label": True},
-        {"label": "FILE", "value": f"{matter_no}\nOpening date: {date_opened}\nClosure date:", "bold_label": False},
-        {"label": "Legal Fee", "value": "CASH", "bold_label": False},
-        {"label": "Remarks", "value": "", "bold_label": False}
+    file_block_text = f"{matter_no}<br/>Opening date: {date_opened}<br/>Closure date:"
+    
+    matrix_rows = [
+        [Paragraph("SUBJECT<br/>MATTER", style_bold_20), Paragraph(full_matter_name, style_normal_20)],
+        [Paragraph("FILE", style_normal_20), Paragraph(file_block_text, style_normal_20)],
+        [Paragraph("Legal Fee", style_normal_20), Paragraph("CASH", style_normal_20)],
+        [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)]
     ]
     
-    for idx, row in enumerate(bottom_table.rows):
-        row.height = row_heights[idx]
-        
-        cell_a = row.cells[0]
-        cell_a.width = Inches(1.596)
-        set_cell_margins(cell_a, top=60, bottom=60, left=100, right=60)
-        p_a = cell_a.paragraphs[0]
-        p_a.paragraph_format.space_after = Pt(0)
-        run_a = p_a.add_run(row_data[idx]["label"])
-        run_a.font.name = 'Times New Roman'
-        run_a.font.size = Pt(20)
-        if row_data[idx]["bold_label"]:
-            run_a.bold = True
-            
-        cell_b = row.cells[1]
-        cell_b.width = Inches(6.083)
-        set_cell_margins(cell_b, top=60, bottom=60, left=100, right=60)
-        p_b = cell_b.paragraphs[0]
-        p_b.paragraph_format.space_after = Pt(0)
-        p_b.paragraph_format.line_spacing = 1.15
-        run_b = p_b.add_run(row_data[idx]["value"])
-        run_b.font.name = 'Times New Roman'
-        run_b.font.size = Pt(20)
-
-    # 🤯 THE GIANT FOOTER: Arial Bold 109 Signpost Block
-    p_mega = doc.add_paragraph()
-    p_mega.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_mega.paragraph_format.space_before = Pt(54)
-    p_mega.paragraph_format.space_after = Pt(0)
+    # Width dimensions: 1.596" and 6.083" scaled to tracking vector scale
+    b_col1 = 1.596 * 72
+    b_col2 = 6.083 * 72
     
-    run_mega = p_mega.add_run(matter_no)
-    run_mega.font.name = 'Arial'
-    run_mega.font.size = Pt(109)
-    run_mega.bold = True
+    # Strict target heights for rows 1 to 4 converted from inches
+    b_row_heights = [0.792 * 72, 1.133 * 72, 0.208 * 72, 0.208 * 72]
     
-    # Save directly down to a binary file stream buffer
-    file_stream = io.BytesIO()
-    doc.save(file_stream)
-    file_stream.seek(0)
-    return file_stream.getvalue()
+    bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2], rowHeights=b_row_heights)
+    bottom_table.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1.5, colors.black), # Fix: Strong black table lines brought back!
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING', (0,0), (-1,-1), 4.3),     # 60 dxa padding
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4.3),  # 60 dxa padding
+        ('LEFTPADDING', (0,0), (-1,-1), 7.2),     # 100 dxa left cell padding
+        ('RIGHTPADDING', (0,0), (-1,-1), 4.3),    # 60 dxa padding
+    ]))
+    story.append(bottom_table)
+    story.append(Spacer(1, 54)) # Generates the precise layout separation gap
+    
+    # ----------------------------------------------------
+    # 🤯 THE GIANT FOOTER BLOCK
+    # ----------------------------------------------------
+    story.append(Paragraph(matter_no, style_giant_foot))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
 
-# --- 4. RAW INPUT DOCX SCRAPING ENGINE ---
+# --- 3. RAW INPUT DOCX SCRAPING ENGINE ---
 def extract_matter_data(doc_path):
     doc = docx.Document(doc_path)
     text_lines = []
@@ -256,10 +214,10 @@ def extract_matter_data(doc_path):
             
     return matter_type, clients_field, contacts_field, referral
 
-# --- 5. WORKSPACE FLOW SYSTEMS ---
+# --- 4. RUNTIME SYSTEM CONFIGURATIONS ---
 if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
-if "docx_binary_store" not in st.session_state: st.session_state["docx_binary_store"] = {}
+if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
 
 uploaded_files = st.file_uploader(
     "Drag and drop Open File Sheets (.docx) here", 
@@ -269,18 +227,19 @@ uploaded_files = st.file_uploader(
 current_file_names = [f.name for f in uploaded_files] if uploaded_files else []
 if current_file_names != st.session_state["previous_files"]:
     st.session_state["previous_files"] = current_file_names
-    st.session_state["docx_binary_store"] = {}
+    st.session_state["pdf_binary_store"] = {}
 
+# --- 5. THE FAIL-SAFE PRODUCTION BAY QUEUE ---
 if uploaded_files:
     st.markdown("---")
     st.subheader("🖨️ Production Queue Confirmation")
-    st.write("Documents read successfully. Sync data matrix rows and prepare physical office templates?")
+    st.write("Documents read successfully. Sync data matrix rows and prepare physical print layouts?")
     
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("✅ YES - Execute Streams & Generate Layouts", use_container_width=True, type="primary"):
-            if not st.session_state["docx_binary_store"]:
-                with st.spinner("⚡ Running full-scale dual execution arrays..."):
+        if st.button("✅ YES - Execute Streams & Generate PDFs", use_container_width=True, type="primary"):
+            if not st.session_state["pdf_binary_store"]:
+                with st.spinner("⚡ Processing dual data arrays..."):
                     sheet = get_google_sheet()
                     
                     try:
@@ -305,39 +264,39 @@ if uploaded_files:
                         current_max += 1
                         new_no = str(current_max)
                         next_idx = target_row - 1
-                        t_date = datetime.now().strftime("%d %B %Y").lstrip("0")
+                        today_str = datetime.now().strftime("%d %B %Y").lstrip("0").upper()
                         
                         m_type, cls, cnt, ref = extract_matter_data(f)
                         
-                        # Stream 1: Update Google Sheets row data
-                        new_row = [next_idx, t_date, new_no, m_type, cls, cnt, ref, "Yes", ""]
+                        # Stream 1: Update Google Sheets
+                        new_row = [next_idx, today_str, new_no, m_type, cls, cnt, ref, "Yes", ""]
                         sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
                         
-                        # Stream 2: Form perfect template layout using your exact parameters
-                        docx_bytes = generate_perfect_docx(new_no, cls, cnt, m_type, t_date)
-                        temp_store[f.name] = (new_no, docx_bytes)
+                        # Stream 2: Render crisp vector PDF
+                        pdf_output_bytes = generate_perfect_pdf(new_no, cls, cnt, m_type, today_str)
+                        temp_store[f.name] = (new_no, pdf_output_bytes)
                         st.toast(f"Synchronized Case File Matrix: Matter {new_no}", icon="🔹")
                         
-                    st.session_state["docx_binary_store"] = temp_store
+                    st.session_state["pdf_binary_store"] = temp_store
                     st.balloons()
                     
     with c2:
         if st.button("❌ NO - Abort Operational Batch", use_container_width=True):
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
-            st.session_state["docx_binary_store"] = {}
+            st.session_state["pdf_binary_store"] = {}
             st.rerun()
 
-# --- 6. CLEAN AUTOMATED DOWNLOAD MATRIX ---
-if st.session_state["docx_binary_store"]:
+# --- 6. DIRECT ARCHITECTURAL PRINT DOWNLOAD LINKS ---
+if st.session_state["pdf_binary_store"]:
     st.markdown("---")
-    st.success("🎉 **Data routing completely finalized. Open your physical file templates below:**")
+    st.success("🎉 **Data routing completely finalized. Action individual hardware print streams straight to PDF:**")
     
-    for fname, (m_no, docx_bytes) in st.session_state["docx_binary_store"].items():
+    for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
         st.download_button(
-            label=f"📝 Save & Open Perfect Template File Cover (Matter File Number: {m_no})",
-            data=docx_bytes,
-            file_name=f"21Chambers_Cover_{m_no}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            label=f"🖨️ Download & Print Cover Sheet PDF (Matter File Number: {m_no})",
+            data=pdf_bytes,
+            file_name=f"21Chambers_Cover_{m_no}.pdf",
+            mime="application/pdf",
             use_container_width=True
         )
