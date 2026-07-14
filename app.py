@@ -180,40 +180,97 @@ def extract_matter_data(doc_path):
                 
     full_text = "\n".join(text_lines)
     
+    # ⚖️ Matter Type Assignment
     if "uncontested divorce" in full_text.lower(): matter_type = "UD"
     elif "contested divorce" in full_text.lower(): matter_type = "CD"
     elif "annulment" in full_text.lower(): matter_type = "Annulment"
     elif "variation" in full_text.lower(): matter_type = "Variation"
     else: matter_type = "Others"
     
-    # FIX: Swapped [^,\n\d] for [^\n\d] so commas are safely included in the name array!
-    app_match = re.search(r"Applicant\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
-    res_match = re.search(r"Respondent\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
+    # 🏢 1. Raw Text Block Extraction (Targeting text sections exactly)
+    # Splitting the document loosely by sections to isolate Applicant vs Respondent info
+    app_section = ""
+    res_section = ""
     
-    applicant = "APPLICANT - NIL"
+    # Find positions to split text logically if both headers exist
+    app_idx = full_text.lower().find("applicant")
+    res_idx = full_text.lower().find("respondent")
+    
+    if app_idx != -1 and res_idx != -1:
+        if app_idx < res_idx:
+            app_section = full_text[app_idx:res_idx]
+            res_section = full_text[res_idx:]
+        else:
+            res_section = full_text[res_idx:app_idx]
+            app_section = full_text[app_idx:]
+    elif app_idx != -1:
+        app_section = full_text[app_idx:]
+    elif res_idx != -1:
+        res_section = full_text[res_idx:]
+
+    # --- APPLICANT PARSING NODE ---
+    app_match = re.search(r"Applicant\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
     if app_match:
-        # Strip trailing cleanups safely
         clean_app = re.split(r"\s*[-\s–]\s*upload", app_match.group(1), flags=re.IGNORECASE)[0]
-        applicant = f"APPLICANT - {clean_app.strip().upper()}"
+        applicant_name = clean_app.strip().upper()
+    else:
+        applicant_name = "NIL" # Fallback: No name found
+
+    # Scan specifically inside the applicant's text region for their contacts
+    app_target_text = app_section if app_section else full_text
+    app_target_text = app_target_text.replace("6224 1848", "").replace("6223 3092", "") # Exclude firm lines
+    
+    app_mobs = re.findall(r"\+?\b(?:65|60|1|44)?[ \-]?[89]\d{3}[ \-]?\d{4}\b|\+?60[ \-]?1\d[ \-]?\d{2,3}[ \-]?\d{4}\b|\b01\d[ \-]?\d{2,3}[ \-]?\d{4}\b", app_target_text)
+    app_emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", app_target_text)
+    
+    app_mob = "NIL"
+    if app_mobs:
+        clean_mob = re.sub(r"[\s\-+]", "", app_mobs[0])
+        if clean_mob.startswith('01'): clean_mob = f"60{clean_mob[1:]}"
         
-    respondent = "RESPONDENT - NIL"
+        if clean_mob.startswith(('8', '9')) and len(clean_mob) == 8:
+            app_mob = f"+65 {clean_mob}"
+        else:
+            app_mob = f"+{clean_mob[:2]} {clean_mob[2:]}"
+            
+    app_email = app_emails[0] if app_emails else "NIL" # Fallback: Put NIL if no email exists
+
+    # --- RESPONDENT PARSING NODE ---
+    res_match = re.search(r"Respondent\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
     if res_match:
         clean_res = re.split(r"\s*[-\s–]\s*upload", res_match.group(1), flags=re.IGNORECASE)[0]
-        respondent = f"RESPONDENT - {clean_res.strip().upper()}"
+        respondent_name = clean_res.strip().upper()
+    else:
+        respondent_name = "NIL" # Fallback: No name found
+
+    # Scan specifically inside the respondent's text region for their contacts
+    res_target_text = res_section if res_section else full_text
+    res_target_text = res_target_text.replace("6224 1848", "").replace("6223 3092", "") # Exclude firm lines
+    
+    res_mobs = re.findall(r"\+?\b(?:65|60|1|44)?[ \-]?[89]\d{3}[ \-]?\d{4}\b|\+?60[ \-]?1\d[ \-]?\d{2,3}[ \-]?\d{4}\b|\b01\d[ \-]?\d{2,3}[ \-]?\d{4}\b", res_target_text)
+    res_emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", res_target_text)
+    
+    res_mob = "NIL"
+    if res_mobs:
+        clean_mob = re.sub(r"[\s\-+]", "", res_mobs[0])
+        if clean_mob.startswith('01'): clean_mob = f"60{clean_mob[1:]}"
         
-    clients_field = f"{applicant}\n{respondent}"
+        if clean_mob.startswith(('8', '9')) and len(clean_mob) == 8:
+            res_mob = f"+65 {clean_mob}"
+        else:
+            res_mob = f"+{clean_mob[:2]} {clean_mob[2:]}"
+            
+    res_email = res_emails[0] if res_emails else "NIL" # Fallback: Put NIL if no email exists
+
+    # --- RE-MAPPING THE DUAL ARRAY OUTPUTS ---
+    # We cleanly arrange them into the text variables exactly how our cover sheet template prints them
+    clients_field = f"APPLICANT - {applicant_name}\nRESPONDENT - {respondent_name}"
     
-    raw_mobiles = re.findall(r"\b[89]\d{3}[ \-]?\d{4}\b", full_text)
-    mobiles = [re.sub(r"[\s\-]", "", mob) for mob in raw_mobiles]
-    emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", full_text)
+    # We compile the contact lines dynamically. If a line has a phone or email, it prints it.
+    # Otherwise, it cleanly outputs the mapped fallback tokens.
+    contacts_field = f"{app_mob} {app_email}\n{res_mob} {res_email}".strip()
     
-    contacts = []
-    for i in range(max(len(mobiles), len(emails))):
-        mob = f"+65 {mobiles[i]}" if i < len(mobiles) else ""
-        em = emails[i] if i < len(emails) else ""
-        contacts.append(f"{mob} {em}".strip())
-    contacts_field = "\n".join(contacts)
-    
+    # 🔹 Referral tracking (established logic remains completely untouched)
     referral = "Google"
     if "referral" in full_text.lower():
         ref_match = re.search(r"referral\s*[\s,:\-–]\s*(\w+)", full_text, re.IGNORECASE)
