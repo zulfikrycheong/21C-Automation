@@ -9,14 +9,13 @@ import base64
 import json
 import io
 
-# ReportLab layout framework components
+# ReportLab positioning elements
 from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
-# Force clean full-width canvas layout workspace view
+# Force clear full-width canvas layout workspace view
 st.set_page_config(page_title="21 Chambers Client List", layout="wide")
 
 if os.path.exists("Company Logo.png"):
@@ -54,45 +53,53 @@ def get_google_sheet():
         )
     return sheet
 
-# --- 2. HIGH-FIDELITY VECTOR PDF ENGINE (Exact Dissection Translation) ---
+# --- 2. TYPOGRAPHY POSITIONING ENGINE ---
 def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, date_opened):
     buffer = io.BytesIO()
     
-    # 📐 Page Setup Translation: A4 with exact 0.295" left/right margins (21.24 points)
-    # Top/Bottom set to 0.5" (36 points)
+    # Page Setup: A4 with your exact 0.295" margins (21.24 points)
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
         leftMargin=21.24, rightMargin=21.24,
         topMargin=36.0, bottomMargin=36.0
     )
     
-    # Calculate available printable horizontal canvas space
-    printable_width = A4[0] - 42.48 # Total page width minus left/right margins
+    printable_width = A4[0] - 42.48 
     
-    # Custom Typography Style Profiles matching your 20pt Times New Roman spec sheet
-    style_normal_20 = ParagraphStyle('Norm20', fontName='Times-Roman', fontSize=20, leading=24, alignment=TA_LEFT)
-    style_bold_20 = ParagraphStyle('Bold20', fontName='Times-Bold', fontSize=20, leading=24, alignment=TA_LEFT)
-    style_firm_title = ParagraphStyle('FirmTitle', fontName='Times-Bold', fontSize=20, leading=24, alignment=TA_CENTER)
-    style_firm_body = ParagraphStyle('FirmBody', fontName='Times-Roman', fontSize=20, leading=24, alignment=TA_CENTER)
+    # FIX: We set explicit 'leading' matching the massive 20pt font so text lines never collide
+    style_normal_20 = ParagraphStyle('Norm20', fontName='Times-Roman', fontSize=20, leading=26, alignment=TA_LEFT)
+    style_bold_20 = ParagraphStyle('Bold20', fontName='Times-Bold', fontSize=20, leading=26, alignment=TA_LEFT)
+    style_firm_title = ParagraphStyle('FirmTitle', fontName='Times-Bold', fontSize=20, leading=26, alignment=TA_CENTER)
+    style_firm_body = ParagraphStyle('FirmBody', fontName='Times-Roman', fontSize=20, leading=26, alignment=TA_CENTER)
     
-    # 🤯 The Mega Signpost Footer Style (Arial Bold 109pt)
+    # The Mega Footer Code (Arial Bold 109pt)
     style_giant_foot = ParagraphStyle('GiantFoot', fontName='Helvetica-Bold', fontSize=109, leading=115, alignment=TA_CENTER)
     
     story = []
     
     # ----------------------------------------------------
-    # 🏢 TOP TABLE: Spacer & Party/Firm Details
+    # 🏢 TOP SECTION: Spacing & Party / Firm Layout
     # ----------------------------------------------------
     client_lines = [line.strip() for line in clients_text.split('\n') if line.strip()]
     contact_lines = [line.strip() for line in contacts_text.split('\n') if line.strip()]
     
     right_cell_elements = []
-    for line in client_lines:
-        right_cell_elements.append(Paragraph(line, style_normal_20))
-    for line in contact_lines:
-        right_cell_elements.append(Paragraph(line, style_normal_20))
+    
+    # Process Applicant Block
+    if len(client_lines) > 0:
+        right_cell_elements.append(Paragraph(client_lines[0], style_normal_20))
+    if len(contact_lines) > 0:
+        right_cell_elements.append(Paragraph(contact_lines[0], style_normal_20))
         
-    # Firm Letterhead Block centered within the right cell layout flow
+    right_cell_elements.append(Spacer(1, 14)) # Clean vertical separation gap
+    
+    # Process Respondent Block
+    if len(client_lines) > 1:
+        right_cell_elements.append(Paragraph(client_lines[1], style_normal_20))
+    if len(contact_lines) > 1:
+        right_cell_elements.append(Paragraph(contact_lines[1], style_normal_20))
+        
+    # Firm Letterhead Section
     right_cell_elements.append(Spacer(1, 24))
     right_cell_elements.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
     right_cell_elements.append(Spacer(1, 4))
@@ -100,23 +107,24 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     right_cell_elements.append(Spacer(1, 4))
     right_cell_elements.append(Paragraph("TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092", style_firm_body))
     
-    # Columns: Left Spacer (1.333") vs Right Info Cell (6.346") converted to layout points
+    # Left Spacer (1.333") vs Right Data Info Column (6.346") converted to layout units
     col_w_left = 1.333 * 72
     col_w_right = 6.346 * 72
     
-    top_table = Table([["", right_cell_elements]], colWidths=[col_w_left, col_w_right], rowHeights=[1.567 * 72])
+    # FIX: Removed the rigid height constraint on row Heights! The table now auto-expands cleanly
+    top_table = Table([["", right_cell_elements]], colWidths=[col_w_left, col_w_right])
     top_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('LEFTPADDING', (1,0), (1,0), 7.2), # Exact 100 dxa left margin padding
+        ('LEFTPADDING', (1,0), (1,0), 7.2), # 100 dxa left cell padding indentation
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ('TOPPADDING', (0,0), (-1,-1), 0),
         ('BOTTOMPADDING', (0,0), (-1,-1), 0),
     ]))
     story.append(top_table)
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 35))
     
     # ----------------------------------------------------
-    # 📉 BOTTOM TABLE: Matter Specifications Matrix
+    # 📉 MIDDLE SECTION: Matter Specifications Matrix
     # ----------------------------------------------------
     full_matter_name = "Uncontested Divorce"
     if matter_type == "CD": full_matter_name = "Contested Divorce"
@@ -133,27 +141,24 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
         [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)]
     ]
     
-    # Width dimensions: 1.596" and 6.083" scaled to tracking vector scale
+    # Label col width (1.596") vs value col width (6.083")
     b_col1 = 1.596 * 72
     b_col2 = 6.083 * 72
     
-    # Strict target heights for rows 1 to 4 converted from inches
-    b_row_heights = [0.792 * 72, 1.133 * 72, 0.208 * 72, 0.208 * 72]
-    
-    bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2], rowHeights=b_row_heights)
+    # FIX: No forced cell height limitations, allowing perfect dynamic placement
+    bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2])
     bottom_table.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1.5, colors.black), # Fix: Strong black table lines brought back!
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 4.3),     # 60 dxa padding
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4.3),  # 60 dxa padding
-        ('LEFTPADDING', (0,0), (-1,-1), 7.2),     # 100 dxa left cell padding
-        ('RIGHTPADDING', (0,0), (-1,-1), 4.3),    # 60 dxa padding
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 7.2), # Exact 100 dxa spacing
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(bottom_table)
-    story.append(Spacer(1, 54)) # Generates the precise layout separation gap
+    story.append(Spacer(1, 54)) 
     
     # ----------------------------------------------------
-    # 🤯 THE GIANT FOOTER BLOCK
+    # 🤯 BOTTOM SECTION: The Giant Footer Display
     # ----------------------------------------------------
     story.append(Paragraph(matter_no, style_giant_foot))
     
@@ -161,7 +166,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     buffer.seek(0)
     return buffer.getvalue()
 
-# --- 3. RAW INPUT DOCX SCRAPING ENGINE ---
+# --- 3. DOCX PARSING INTAKE ENGINE ---
 def extract_matter_data(doc_path):
     doc = docx.Document(doc_path)
     text_lines = []
@@ -214,7 +219,7 @@ def extract_matter_data(doc_path):
             
     return matter_type, clients_field, contacts_field, referral
 
-# --- 4. RUNTIME SYSTEM CONFIGURATIONS ---
+# --- 4. STREAMLIT FRAMEWORK FLOWS ---
 if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
 if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
@@ -229,17 +234,15 @@ if current_file_names != st.session_state["previous_files"]:
     st.session_state["previous_files"] = current_file_names
     st.session_state["pdf_binary_store"] = {}
 
-# --- 5. THE FAIL-SAFE PRODUCTION BAY QUEUE ---
 if uploaded_files:
     st.markdown("---")
     st.subheader("🖨️ Production Queue Confirmation")
-    st.write("Documents read successfully. Sync data matrix rows and prepare physical print layouts?")
     
     c1, c2 = st.columns(2)
     with c1:
         if st.button("✅ YES - Execute Streams & Generate PDFs", use_container_width=True, type="primary"):
             if not st.session_state["pdf_binary_store"]:
-                with st.spinner("⚡ Processing dual data arrays..."):
+                with st.spinner("⚡ Running layout updates..."):
                     sheet = get_google_sheet()
                     
                     try:
@@ -268,14 +271,13 @@ if uploaded_files:
                         
                         m_type, cls, cnt, ref = extract_matter_data(f)
                         
-                        # Stream 1: Update Google Sheets
                         new_row = [next_idx, today_str, new_no, m_type, cls, cnt, ref, "Yes", ""]
                         sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
                         
-                        # Stream 2: Render crisp vector PDF
+                        # Generate the newly aligned text document layout
                         pdf_output_bytes = generate_perfect_pdf(new_no, cls, cnt, m_type, today_str)
                         temp_store[f.name] = (new_no, pdf_output_bytes)
-                        st.toast(f"Synchronized Case File Matrix: Matter {new_no}", icon="🔹")
+                        st.toast(f"Synchronized Matrix: Matter {new_no}", icon="🔹")
                         
                     st.session_state["pdf_binary_store"] = temp_store
                     st.balloons()
@@ -287,16 +289,14 @@ if uploaded_files:
             st.session_state["pdf_binary_store"] = {}
             st.rerun()
 
-# --- 6. DIRECT ARCHITECTURAL PRINT DOWNLOAD LINKS ---
 if st.session_state["pdf_binary_store"]:
     st.markdown("---")
-    st.success("🎉 **Data routing completely finalized. Action individual hardware print streams straight to PDF:**")
-    
+    st.success("🎉 **Data routing finalized. Download the adjusted text layout below:**")
     for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
         st.download_button(
-            label=f"🖨️ Download & Print Cover Sheet PDF (Matter File Number: {m_no})",
+            label=f"🖨️ Download Alignment Check PDF (Matter: {m_no})",
             data=pdf_bytes,
-            file_name=f"21Chambers_Cover_{m_no}.pdf",
+            file_name=f"21Chambers_TextCheck_{m_no}.pdf",
             mime="application/pdf",
             use_container_width=True
         )
