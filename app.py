@@ -77,7 +77,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story = []
     
     # ----------------------------------------------------
-    # 🏢 TOP SECTION: Spacing & Party Layout
+    # 🏢 TOP SECTION: Spacing & Party Layout (REPLICATED WITH BOTTOM CAGE RULES)
     # ----------------------------------------------------
     client_lines = [line.strip() for line in clients_text.split('\n') if line.strip()]
     contact_lines = [line.strip() for line in contacts_text.split('\n') if line.strip()]
@@ -98,23 +98,25 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     if len(contact_lines) > 1:
         party_elements.append(Paragraph(contact_lines[1], style_normal_20))
         
-    # Build Top Indentation Grid: Left Spacer (1.333") vs Right Data Column (6.346")
+    # Columns: Left Spacer (1.333") vs Right Data Column (6.346")
     col_w_left = 1.333 * 72
     col_w_right = 6.346 * 72
     
+    # FIX: Replicated the exact geometric grid cage parameters onto the top container structure
     top_table = Table([["", party_elements]], colWidths=[col_w_left, col_w_right])
     top_table.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1.5, colors.black),  # 🏛️ Cage lines explicitly added here!
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('LEFTPADDING', (1,0), (1,0), 7.2), # 100 dxa left indentation padding
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ('TOPPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 7.2),         # Exact 100 dxa spacing
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(top_table)
     story.append(Spacer(1, 24))
     
     # ----------------------------------------------------
-    # 🏛️ CENTRAL HEADER BLOCK (Perfect Page-Wide Center Alignment)
+    # 🏛️ CENTRAL HEADER BLOCK (Untouched, Perfect Center)
     # ----------------------------------------------------
     story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
     story.append(Spacer(1, 4))
@@ -124,7 +126,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story.append(Spacer(1, 40))
     
     # ----------------------------------------------------
-    # 📉 BOTTOM MATRIX: Auto-Expanding Vector Cage
+    # 📉 BOTTOM MATRIX: Auto-Expanding Vector Cage (Untouched)
     # ----------------------------------------------------
     full_matter_name = "Uncontested Divorce"
     if matter_type == "CD": full_matter_name = "Contested Divorce"
@@ -141,25 +143,23 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
         [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)]
     ]
     
-    # Width dimensions: 1.596" and 6.083" converted directly from specs
     b_col1 = 1.596 * 72
     b_col2 = 6.083 * 72
     
-    # FIX: We took the exact code layout from before and JUST added the GRID line parameter!
     bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2])
     bottom_table.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1.5, colors.black),  # 🏛️ The cage line walls are safely locked in!
+        ('GRID', (0,0), (-1,-1), 1.5, colors.black),
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('TOPPADDING', (0,0), (-1,-1), 6),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('LEFTPADDING', (0,0), (-1,-1), 7.2),         # Exact 100 dxa indentation spacing
+        ('LEFTPADDING', (0,0), (-1,-1), 7.2),
         ('RIGHTPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(bottom_table)
     story.append(Spacer(1, 54)) 
     
     # ----------------------------------------------------
-    # 🤯 BOTTOM SECTION: The Giant Footer Display
+    # 🤯 BOTTOM SECTION: The Giant Footer Display (Untouched)
     # ----------------------------------------------------
     story.append(Paragraph(matter_no, style_giant_foot))
     
@@ -243,7 +243,7 @@ if uploaded_files:
     with c1:
         if st.button("✅ YES - Execute Streams & Generate PDFs", use_container_width=True, type="primary"):
             if not st.session_state["pdf_binary_store"]:
-                with st.spinner("⚡ Setting dynamic cage layouts..."):
+                with st.spinner("⚡ Activating dual architectural cages..."):
                     sheet = get_google_sheet()
                     
                     try:
@@ -292,7 +292,7 @@ if uploaded_files:
 
 if st.session_state["pdf_binary_store"]:
     st.markdown("---")
-    st.success("🎉 **Data routing completely finalized. Download the official print layout below:**")
+    st.success("🎉 **Data routing completely finalized. Download the official double-caged print layout below:**")
     for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
         st.download_button(
             label=f"🖨️ Download Production Cover Sheet PDF (Matter File Number: {m_no})",
