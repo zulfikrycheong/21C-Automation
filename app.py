@@ -187,87 +187,47 @@ def extract_matter_data(doc_path):
     elif "variation" in full_text.lower(): matter_type = "Variation"
     else: matter_type = "Others"
     
-    # 🏢 1. Raw Text Block Extraction (Targeting text sections exactly)
-    # Splitting the document loosely by sections to isolate Applicant vs Respondent info
-    app_section = ""
-    res_section = ""
-    
-    # Find positions to split text logically if both headers exist
-    app_idx = full_text.lower().find("applicant")
-    res_idx = full_text.lower().find("respondent")
-    
-    if app_idx != -1 and res_idx != -1:
-        if app_idx < res_idx:
-            app_section = full_text[app_idx:res_idx]
-            res_section = full_text[res_idx:]
-        else:
-            res_section = full_text[res_idx:app_idx]
-            app_section = full_text[app_idx:]
-    elif app_idx != -1:
-        app_section = full_text[app_idx:]
-    elif res_idx != -1:
-        res_section = full_text[res_idx:]
-
-    # --- APPLICANT PARSING NODE ---
+    # 🏢 Name Extraction Node
     app_match = re.search(r"Applicant\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
-    if app_match:
-        clean_app = re.split(r"\s*[-\s–]\s*upload", app_match.group(1), flags=re.IGNORECASE)[0]
-        applicant_name = clean_app.strip().upper()
-    else:
-        applicant_name = "NIL" # Fallback: No name found
-
-    # Scan specifically inside the applicant's text region for their contacts
-    app_target_text = app_section if app_section else full_text
-    app_target_text = app_target_text.replace("6224 1848", "").replace("6223 3092", "") # Exclude firm lines
-    
-    app_mobs = re.findall(r"\+?\b(?:65|60|1|44)?[ \-]?[89]\d{3}[ \-]?\d{4}\b|\+?60[ \-]?1\d[ \-]?\d{2,3}[ \-]?\d{4}\b|\b01\d[ \-]?\d{2,3}[ \-]?\d{4}\b", app_target_text)
-    app_emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", app_target_text)
-    
-    app_mob = "NIL"
-    if app_mobs:
-        clean_mob = re.sub(r"[\s\-+]", "", app_mobs[0])
-        if clean_mob.startswith('01'): clean_mob = f"60{clean_mob[1:]}"
-        
-        if clean_mob.startswith(('8', '9')) and len(clean_mob) == 8:
-            app_mob = f"+65 {clean_mob}"
-        else:
-            app_mob = f"+{clean_mob[:2]} {clean_mob[2:]}"
-            
-    app_email = app_emails[0] if app_emails else "NIL" # Fallback: Put NIL if no email exists
-
-    # --- RESPONDENT PARSING NODE ---
     res_match = re.search(r"Respondent\s*–\s*([^\n\d]+)", full_text, re.IGNORECASE)
-    if res_match:
-        clean_res = re.split(r"\s*[-\s–]\s*upload", res_match.group(1), flags=re.IGNORECASE)[0]
-        respondent_name = clean_res.strip().upper()
-    else:
-        respondent_name = "NIL" # Fallback: No name found
-
-    # Scan specifically inside the respondent's text region for their contacts
-    res_target_text = res_section if res_section else full_text
-    res_target_text = res_target_text.replace("6224 1848", "").replace("6223 3092", "") # Exclude firm lines
     
-    res_mobs = re.findall(r"\+?\b(?:65|60|1|44)?[ \-]?[89]\d{3}[ \-]?\d{4}\b|\+?60[ \-]?1\d[ \-]?\d{2,3}[ \-]?\d{4}\b|\b01\d[ \-]?\d{2,3}[ \-]?\d{4}\b", res_target_text)
-    res_emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", res_target_text)
+    applicant_name = re.split(r"\s*[-\s–]\s*upload", app_match.group(1), flags=re.IGNORECASE)[0].strip().upper() if app_match else "NIL"
+    respondent_name = re.split(r"\s*[-\s–]\s*upload", res_match.group(1), flags=re.IGNORECASE)[0].strip().upper() if res_match else "NIL"
     
-    res_mob = "NIL"
-    if res_mobs:
-        clean_mob = re.sub(r"[\s\-+]", "", res_mobs[0])
-        if clean_mob.startswith('01'): clean_mob = f"60{clean_mob[1:]}"
-        
+    # 📱 Global Sequential Contact Extraction Node
+    clean_text = full_text.replace("6224 1848", "").replace("6223 3092", "") # Filter firm lines
+    
+    raw_mobiles = re.findall(r"\+?\b(?:65|60|1|44)?[ \-]?[89]\d{3}[ \-]?\d{4}\b|\+?60[ \-]?1\d[ \-]?\d{2,3}[ \-]?\d{4}\b|\b01\d[ \-]?\d{2,3}[ \-]?\d{4}\b", clean_text)
+    mobiles = [re.sub(r"[\s\-+]", "", mob) for mob in raw_mobiles]
+    emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", clean_text)
+    
+    # Helper function to format clean numbers natively
+    def format_phone(clean_mob):
+        if clean_mob.startswith('01'): 
+            clean_mob = f"60{clean_mob[1:]}"
         if clean_mob.startswith(('8', '9')) and len(clean_mob) == 8:
-            res_mob = f"+65 {clean_mob}"
+            return f"+65 {clean_mob}"
         else:
-            res_mob = f"+{clean_mob[:2]} {clean_mob[2:]}"
-            
-    res_email = res_emails[0] if res_emails else "NIL" # Fallback: Put NIL if no email exists
+            return f"+{clean_mob[:2]} {clean_mob[2:]}"
 
-    # --- RE-MAPPING THE DUAL ARRAY OUTPUTS ---
-    # We cleanly arrange them into the text variables exactly how our cover sheet template prints them
+    # --- APPLICANT CONTACTS (Index 0) ---
+    if len(mobiles) > 0:
+        app_mob = format_phone(mobiles[0])
+    else:
+        app_mob = "NIL"
+        
+    app_email = emails[0] if len(emails) > 0 else "NIL"
+
+    # --- RESPONDENT CONTACTS (Index 1) ---
+    if len(mobiles) > 1:
+        res_mob = format_phone(mobiles[1])
+    else:
+        res_mob = "NIL"
+        
+    res_email = emails[1] if len(emails) > 1 else "NIL"
+
+    # --- 🏢 RE-MAPPING THE COMPACT STRUCTURAL STRINGS ---
     clients_field = f"APPLICANT - {applicant_name}\nRESPONDENT - {respondent_name}"
-    
-    # We compile the contact lines dynamically. If a line has a phone or email, it prints it.
-    # Otherwise, it cleanly outputs the mapped fallback tokens.
     contacts_field = f"{app_mob} {app_email}\n{res_mob} {res_email}".strip()
     
     # 🔹 Referral tracking (established logic remains completely untouched)
@@ -278,7 +238,6 @@ def extract_matter_data(doc_path):
     elif "jav" in full_text.lower(): referral = "Javern"
             
     return matter_type, clients_field, contacts_field, referral
-
 # --- 4. STREAMLIT FRAMEWORK FLOWS ---
 if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
