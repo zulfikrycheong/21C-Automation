@@ -54,12 +54,11 @@ def get_google_sheet():
         )
     return sheet
 
-# --- 2. VECTOR PDF CAGE ENGINE ---
+# --- 2. VECTOR PDF ENGINE ---
 def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, date_opened):
     buffer = io.BytesIO()
     
     # 📐 Page Setup: A4 with exact 0.295" left/right margins (21.24 points)
-    # Top/Bottom set to 0.5" (36 points)
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
         leftMargin=21.24, rightMargin=21.24,
@@ -115,7 +114,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story.append(Spacer(1, 24))
     
     # ----------------------------------------------------
-    # 🏛️ CENTRAL HEADER BLOCK (FIX: Now completely un-caged and centered page-wide!)
+    # 🏛️ CENTRAL HEADER BLOCK (Perfect Page-Wide Center Alignment)
     # ----------------------------------------------------
     story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
     story.append(Spacer(1, 4))
@@ -125,7 +124,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story.append(Spacer(1, 40))
     
     # ----------------------------------------------------
-    # 📉 BOTTOM MATRIX: The Physical Cage Framework
+    # 📉 BOTTOM MATRIX: Auto-Expanding Vector Cage
     # ----------------------------------------------------
     full_matter_name = "Uncontested Divorce"
     if matter_type == "CD": full_matter_name = "Contested Divorce"
@@ -142,24 +141,22 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
         [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)]
     ]
     
-    # Label column width (1.596") vs Value column width (6.083") converted from specs
+    # Width dimensions: 1.596" and 6.083" converted directly from specs
     b_col1 = 1.596 * 72
     b_col2 = 6.083 * 72
     
-    # Strict target geometric row heights mapped from your python-docx layout data
-    b_row_heights = [0.792 * 72, 1.133 * 72, 0.208 * 72, 0.208 * 72]
-    
-    bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2], rowHeights=b_row_heights)
+    # FIX: We took the exact code layout from before and JUST added the GRID line parameter!
+    bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2])
     bottom_table.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1.5, colors.black),  # 🏛️ The Cage Border Walls are completely engaged!
+        ('GRID', (0,0), (-1,-1), 1.5, colors.black),  # 🏛️ The cage line walls are safely locked in!
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 4.3),     # 60 dxa micro top padding
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4.3),  # 60 dxa micro bottom padding
-        ('LEFTPADDING', (0,0), (-1,-1), 7.2),     # 100 dxa left layout cell padding indentation
-        ('RIGHTPADDING', (0,0), (-1,-1), 4.3),    # 60 dxa right padding
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 7.2),         # Exact 100 dxa indentation spacing
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(bottom_table)
-    story.append(Spacer(1, 54)) # Spacing gap to separate the massive footer string below
+    story.append(Spacer(1, 54)) 
     
     # ----------------------------------------------------
     # 🤯 BOTTOM SECTION: The Giant Footer Display
@@ -246,7 +243,7 @@ if uploaded_files:
     with c1:
         if st.button("✅ YES - Execute Streams & Generate PDFs", use_container_width=True, type="primary"):
             if not st.session_state["pdf_binary_store"]:
-                with st.spinner("⚡ Activating architectural cage lines..."):
+                with st.spinner("⚡ Setting dynamic cage layouts..."):
                     sheet = get_google_sheet()
                     
                     try:
@@ -278,7 +275,7 @@ if uploaded_files:
                         new_row = [next_idx, today_str, new_no, m_type, cls, cnt, ref, "Yes", ""]
                         sheet.update(range_name=f"A{target_row}:I{target_row}", values=[new_row])
                         
-                        # Generate the newly aligned text document layout encapsulated by cage grids
+                        # Process layout engine output
                         pdf_output_bytes = generate_perfect_pdf(new_no, cls, cnt, m_type, today_str)
                         temp_store[f.name] = (new_no, pdf_output_bytes)
                         st.toast(f"Synchronized Matrix: Matter {new_no}", icon="🔹")
@@ -298,7 +295,7 @@ if st.session_state["pdf_binary_store"]:
     st.success("🎉 **Data routing completely finalized. Download the official print layout below:**")
     for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
         st.download_button(
-            label=f"🖨️ Download Production Caged Cover Sheet PDF (Matter File Number: {m_no})",
+            label=f"🖨️ Download Production Cover Sheet PDF (Matter File Number: {m_no})",
             data=pdf_bytes,
             file_name=f"21Chambers_Cover_{m_no}.pdf",
             mime="application/pdf",
