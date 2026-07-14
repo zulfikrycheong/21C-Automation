@@ -58,7 +58,7 @@ def get_google_sheet():
 def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, date_opened):
     buffer = io.BytesIO()
     
-    # 📐 Page Setup: A4 with exact 0.295" left/right margins (21.24 points)
+    # Page Setup: A4 with exact 0.295" left/right margins (21.24 points)
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
         leftMargin=21.24, rightMargin=21.24,
@@ -77,7 +77,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story = []
     
     # ----------------------------------------------------
-    # 🏢 TOP SECTION: Spacing & Party Layout (REPLICATED WITH BOTTOM CAGE RULES)
+    # TOP SECTION: Spacing & Party Layout (REPLICATED WITH BOTTOM CAGE RULES)
     # ----------------------------------------------------
     client_lines = [line.strip() for line in clients_text.split('\n') if line.strip()]
     contact_lines = [line.strip() for line in contacts_text.split('\n') if line.strip()]
@@ -116,7 +116,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story.append(Spacer(1, 24))
     
     # ----------------------------------------------------
-    # 🏛️ CENTRAL HEADER BLOCK (Untouched, Perfect Center)
+    # CENTRAL HEADER BLOCK (Untouched, Perfect Center)
     # ----------------------------------------------------
     story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
     story.append(Spacer(1, 4))
@@ -126,7 +126,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story.append(Spacer(1, 40))
     
     # ----------------------------------------------------
-    # 📉 BOTTOM MATRIX: Auto-Expanding Vector Cage (Untouched)
+    # BOTTOM MATRIX: Auto-Expanding Vector Cage (Untouched)
     # ----------------------------------------------------
     full_matter_name = "Uncontested Divorce"
     if matter_type == "CD": full_matter_name = "Contested Divorce"
@@ -159,7 +159,7 @@ def generate_perfect_pdf(matter_no, clients_text, contacts_text, matter_type, da
     story.append(Spacer(1, 54)) 
     
     # ----------------------------------------------------
-    # 🤯 BOTTOM SECTION: The Giant Footer Display (Untouched)
+    # BOTTOM SECTION: The Giant Footer Display (Untouched)
     # ----------------------------------------------------
     story.append(Paragraph(matter_no, style_giant_foot))
     
@@ -224,6 +224,18 @@ def extract_matter_data(doc_path):
 if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
 if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
+
+# Inject custom theme styles to massively increase the drop zone box padding
+st.markdown("""
+    <style>
+        /* Target the internal file uploader drag area box footprint */
+        [data-testid="stFileUploaderDropzone"] {
+            padding: 5rem 3rem !important;
+            border-radius: 12px !important;
+            background-color: #f8f9fa !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 uploaded_files = st.file_uploader(
     "Drag and drop Open File Sheets (.docx) here", 
@@ -292,7 +304,7 @@ if uploaded_files:
 
 if st.session_state["pdf_binary_store"]:
     st.markdown("---")
-    st.success("🎉 **Data routing completely finalized. Download the official double-caged print layout below:**")
+    st.success("🎉 **Data routing completely finalized. Download the printable cover sheet below:**")
     for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
         st.download_button(
             label=f"🖨️ Download Production Cover Sheet PDF (Matter File Number: {m_no})",
