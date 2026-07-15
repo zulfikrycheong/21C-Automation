@@ -248,39 +248,39 @@ if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
 if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
 
-# --- 🛠️ SERVICE ACCOUNT ACCESS GATEWAY INSTRUCTIONS ---
-with st.expander("🔑 NEW SHEET / NEW YEAR FILE CONFIGURATION PROTOCOL", expanded=False):
-    st.markdown("""
-        ### 🌐 Connecting a Brand New Master Sheet File
-        If you are starting a new tracking layout format or switching to a completely new Google Sheet file for the new calendar year, the automation machine needs authorization to read/write to the new document.
+# --- 🛠️ SIDEBAR ACCESS CONFIGURATION PANEL ---
+with st.sidebar:
+    st.markdown("### 🔑 SYSTEM CONFIGURATION")
+    with st.expander("🌐 NEW YEAR / NEW SHEET PROTOCOL", expanded=False):
+        st.markdown("""
+            ### Connecting a New Master Sheet
+            If you are starting a new tracking format or switching to a new Google Sheet file for a new calendar year, the automation machine needs authorization.
+            
+            **Follow these steps to authorize the link instantly:**
+            1. Open your new master Google Sheet.
+            2. Click the blue **Share** button (top right).
+            3. Invite the system integration email below as an **Editor**:
+            """)
         
-        **Follow these steps to authorize the backend link instantly:**
-        1. Open your new master Google Sheet in your browser.
-        2. Click the large blue **Share** button in the top right corner.
-        3. Invite the automated system framework integration email exactly as written below:
-        """)
-    
-    try:
-        if os.path.exists("credentials.json"):
-            with open("credentials.json") as f:
-                c_data = json.load(f)
-                svc_email = c_data.get("client_email", "your-service-account@iam.gserviceaccount.com")
-        else:
-            encoded_str = st.secrets["encoded_creds"]
-            decoded_bytes = base64.b64decode(encoded_str)
-            creds_dict = json.loads(decoded_bytes)
-            svc_email = creds_dict.get("client_email", "your-service-account@iam.gserviceaccount.com")
-    except:
-        svc_email = "your-service-account@iam.gserviceaccount.com"
-        
-    st.code(svc_email, language="text")
-    st.markdown("""
-        4. Set the access permission dropdown level to **Editor**.
-        5. Uncheck 'Notify people' and click **Share**.
-        
-        *⚠️ **Note:** If the app throws an 'API Error / Sheets Not Found' exception during file upload processing, it means this account authorization step was skipped.*
-        """)
-st.markdown(" ") # Micro spacer gap to clean up the drop zone border proximity
+        try:
+            if os.path.exists("credentials.json"):
+                with open("credentials.json") as f:
+                    c_data = json.load(f)
+                    svc_email = c_data.get("client_email", "your-service-account@iam.gserviceaccount.com")
+            else:
+                encoded_str = st.secrets["encoded_creds"]
+                decoded_bytes = base64.b64decode(encoded_str)
+                creds_dict = json.loads(decoded_bytes)
+                svc_email = creds_dict.get("client_email", "your-service-account@iam.gserviceaccount.com")
+        except:
+            svc_email = "your-service-account@iam.gserviceaccount.com"
+            
+        st.code(svc_email, language="text")
+        st.markdown("""
+            4. Uncheck 'Notify people' and click **Share**.
+            
+            *⚠️ **Note:** If the app throws an 'API Error' during file uploads, this account authorization step was skipped.*
+            """)
 
 # --- 🎨 DYNAMIC THEME CATCH ZONE ---
 st.markdown("""
@@ -325,7 +325,7 @@ if uploaded_files:
     
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("✅ YES - Execute Streams & Generate PDFs", use_container_width=True, type="primary"):
+        if st.button("✅ YES - Update Sheets & Generate PDFs", use_container_width=True, type="primary"):
             if not st.session_state["pdf_binary_store"]:
                 with st.spinner("⚡ Activating dual architectural cages..."):
                     sheet = get_google_sheet()
@@ -368,7 +368,7 @@ if uploaded_files:
                     st.balloons()
                     
     with c2:
-        if st.button("❌ NO - Abort Operational Batch", use_container_width=True):
+        if st.button("❌ NO - Cancel Operation", use_container_width=True):
             st.session_state["uploader_key"] += 1
             st.session_state["previous_files"] = []
             st.session_state["pdf_binary_store"] = {}
@@ -379,7 +379,7 @@ if st.session_state["pdf_binary_store"]:
     st.success("🎉 **Data routing completely finalized. Download the printable cover sheet below:**")
     for fname, (m_no, pdf_bytes) in st.session_state["pdf_binary_store"].items():
         st.download_button(
-            label=f"🖨️ Download Production Cover Sheet PDF (Matter File Number: {m_no})",
+            label=f"🖨️ Download Cover Sheet PDF (Matter File Number: {m_no})",
             data=pdf_bytes,
             file_name=f"21Chambers_Cover_{m_no}.pdf",
             mime="application/pdf",
