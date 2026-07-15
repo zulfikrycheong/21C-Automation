@@ -28,7 +28,7 @@ st.write("Drag and drop your document below to synchronize the master matrix and
 st.markdown("---")
 
 # --- 1. GOOGLE SHEETS MATRIX SYNC ---
-GOOGLE_SHEET_NAME = "Lazy Automation"  
+GOOGLE_SHEET_NAME = "21 Chambers LLC Client List"  
 SHEET_TAB_NAME = datetime.now().strftime("%B %Y")
 CURRENT_YEAR = datetime.now().strftime("%Y")
 
