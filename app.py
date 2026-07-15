@@ -52,6 +52,10 @@ def get_google_sheet():
         sheet = workbook.duplicate_sheet(
             source_sheet_id=template_sheet.id, new_sheet_name=SHEET_TAB_NAME, insert_sheet_index=0 
         )
+        # Inject standard tracking headers to guarantee row append logic works safely
+        headers = [["Index", "Date Opened", "File / Matter No.", "Matter Type", "Client Name(s)", "Contact Details", "Referral Source", "Logged to Matrix", "Remarks"]]
+        sheet.update(range_name="A1:I1", values=headers)
+        
     return sheet
 
 # --- 2. VECTOR PDF ENGINE ---
@@ -238,26 +242,69 @@ def extract_matter_data(doc_path):
     elif "jav" in full_text.lower(): referral = "Javern"
             
     return matter_type, clients_field, contacts_field, referral
+
 # --- 4. STREAMLIT FRAMEWORK FLOWS ---
 if "uploader_key" not in st.session_state: st.session_state["uploader_key"] = 0
 if "previous_files" not in st.session_state: st.session_state["previous_files"] = []
 if "pdf_binary_store" not in st.session_state: st.session_state["pdf_binary_store"] = {}
 
-# Fixed CSS: Massively scales the drop zone while respecting Dark Mode typography
+# --- 🛠️ SERVICE ACCOUNT ACCESS GATEWAY INSTRUCTIONS ---
+with st.expander("🔑 NEW SHEET / NEW YEAR FILE CONFIGURATION PROTOCOL", expanded=False):
+    st.markdown("""
+        ### 🌐 Connecting a Brand New Master Sheet File
+        If you are starting a new tracking layout format or switching to a completely new Google Sheet file for the new calendar year, the automation machine needs authorization to read/write to the new document.
+        
+        **Follow these steps to authorize the backend link instantly:**
+        1. Open your new master Google Sheet in your browser.
+        2. Click the large blue **Share** button in the top right corner.
+        3. Invite the automated system framework integration email exactly as written below:
+        """)
+    
+    try:
+        if os.path.exists("credentials.json"):
+            with open("credentials.json") as f:
+                c_data = json.load(f)
+                svc_email = c_data.get("client_email", "your-service-account@iam.gserviceaccount.com")
+        else:
+            encoded_str = st.secrets["encoded_creds"]
+            decoded_bytes = base64.b64decode(encoded_str)
+            creds_dict = json.loads(decoded_bytes)
+            svc_email = creds_dict.get("client_email", "your-service-account@iam.gserviceaccount.com")
+    except:
+        svc_email = "your-service-account@iam.gserviceaccount.com"
+        
+    st.code(svc_email, language="text")
+    st.markdown("""
+        4. Set the access permission dropdown level to **Editor**.
+        5. Uncheck 'Notify people' and click **Share**.
+        
+        *⚠️ **Note:** If the app throws an 'API Error / Sheets Not Found' exception during file upload processing, it means this account authorization step was skipped.*
+        """)
+st.markdown(" ") # Micro spacer gap to clean up the drop zone border proximity
+
+# --- 🎨 DYNAMIC THEME CATCH ZONE ---
 st.markdown("""
     <style>
-        /* Expands the target footprint area */
+        /* Expands the target footprint area and utilizes dynamic theme variables */
         [data-testid="stFileUploaderDropzone"] {
             padding: 6rem 3rem !important;
             border-radius: 12px !important;
-            background-color: #1e222b !important; /* Dark sleek widget background */
-            border: 2px dashed #4b5563 !important; /* Defined tracking border */
+            background-color: var(--background-color) !important;
+            border: 2px dashed var(--text-color) !important;
+            opacity: 0.85;
         }
         
-        /* Forces the text labels to pop out in clean white/light gray */
+        /* Auto-corrects internal labels to match light/dark contrast text */
         [data-testid="stFileUploaderDropzone"] label, 
         [data-testid="stFileUploaderDropzone"] div {
-            color: #ffffff !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Standardizes the browse files button so it remains visible in both themes */
+        [data-testid="stFileUploaderDropzone"] button {
+            background-color: var(--secondary-background-color) !important;
+            color: var(--text-color) !important;
+            border: 1px solid var(--text-color) !important;
         }
     </style>
 """, unsafe_allow_html=True)
