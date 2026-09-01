@@ -365,10 +365,20 @@ def extract_matter_data(doc_path):
     return parsed_dict
 
 
+import pypdfium2 as pdfium
+
+
 def render_pdf_preview(pdf_bytes):
-    b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-    pdf_display = f'<iframe src="data:application/pdf;base64,{b64_pdf}#toolbar=0&navpanes=0&scrollbar=0" width="100%" height="600" type="application/pdf" style="border-radius: 8px; border: 1px solid #ccc;"></iframe>'
-    st.markdown(pdf_display, unsafe_allow_html=True)
+    """Renders PDF bytes directly as crisp images to avoid browser iframe security blocks."""
+    pdf = pdfium.PdfDocument(pdf_bytes)
+    for i, page in enumerate(pdf):
+        # Render page at 2x scale for sharp text display
+        image = page.render(scale=2).to_pil()
+        st.image(
+            image,
+            caption=f"Page {i + 1}",
+            use_container_width=True,
+        )
 
 
 # --- 4. STREAMLIT FRAMEWORK FLOWS ---
