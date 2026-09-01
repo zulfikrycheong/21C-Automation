@@ -2,3 +2,4 @@ python-docx
 gspread
 google-auth
 reportlab
+pypdfium2
