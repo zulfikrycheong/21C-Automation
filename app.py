@@ -26,14 +26,20 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom Executive Theme Injection
+# Custom Executive Theme Injection (Eggshell & Matte Charcoal)
 st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
+        /* Global Eggshell Background & Matte Charcoal Text */
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #1e2229;
+        }
+        
+        .stApp {
+            background-color: #fcfbf9 !important;
         }
         
         .main-header {
@@ -45,7 +51,7 @@ st.markdown(
         .suite-title {
             font-size: 1.85rem;
             font-weight: 800;
-            color: #0f172a;
+            color: #1e2229;
             letter-spacing: -0.5px;
             margin: 0;
         }
@@ -57,12 +63,13 @@ st.markdown(
             margin-top: 4px;
         }
         
-        /* Modern Tab Overhaul (No 1px Clipping) */
+        /* Clean Tab Overhaul — Eliminates Ugly Purple Focus/Click Artifacts */
         .stTabs [data-baseweb="tab-list"] {
             gap: 12px;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 2px;
             overflow: visible !important;
+            background-color: transparent !important;
         }
         
         .stTabs [data-baseweb="tab"] {
@@ -73,33 +80,47 @@ st.markdown(
             font-weight: 600;
             font-size: 0.92rem;
             color: #64748b;
-            border: none;
-            background-color: transparent;
+            border: none !important;
+            background-color: transparent !important;
             overflow: visible !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        
+        .stTabs [data-baseweb="tab"]:focus, 
+        .stTabs [data-baseweb="tab"]:active {
+            color: #1e40af !important;
+            background-color: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
         
         .stTabs [data-baseweb="tab"] div {
             overflow: visible !important;
+            color: inherit !important;
         }
         
         .stTabs [aria-selected="true"] {
             color: #1e40af !important;
             border-bottom: 3px solid #1e40af !important;
-            background-color: #f8fafc !important;
+            background-color: #f4f2ee !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
         
-        /* Fix Metric Truncation */
+        /* Fix Metric Truncation & Matte Styling */
         [data-testid="stMetricValue"] {
             font-size: 1.65rem !important;
             white-space: normal !important;
             word-break: break-word !important;
+            color: #1e2229 !important;
         }
         
         /* Upload Area Styling */
         [data-testid="stFileUploaderDropzone"] {
             padding: 3.5rem 2rem !important;
             border-radius: 12px !important;
-            background-color: #f8fafc !important;
+            background-color: #f4f2ee !important;
             border: 2px dashed #cbd5e1 !important;
             transition: all 0.2s ease-in-out;
         }
