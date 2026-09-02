@@ -202,161 +202,179 @@ def get_next_matter_number(sheet):
 def generate_perfect_pdf(
     matter_no, clients_text, contacts_text, matter_type, date_opened
 ):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=21.24,
-        rightMargin=21.24,
-        topMargin=36.0,
-        bottomMargin=36.0,
-    )
+  buffer = io.BytesIO()
+  doc = SimpleDocTemplate(
+      buffer,
+      pagesize=A4,
+      leftMargin=21.24,
+      rightMargin=21.24,
+      topMargin=36.0,
+      bottomMargin=36.0,
+  )
 
-    style_normal_20 = ParagraphStyle(
-        "Norm20",
-        fontName="Times-Roman",
-        fontSize=20,
-        leading=26,
-        alignment=TA_LEFT,
-    )
-    style_bold_20 = ParagraphStyle(
-        "Bold20",
-        fontName="Times-Bold",
-        fontSize=20,
-        leading=26,
-        alignment=TA_LEFT,
-    )
-    style_firm_title = ParagraphStyle(
-        "FirmTitle",
-        fontName="Times-Bold",
-        fontSize=20,
-        leading=26,
-        alignment=TA_CENTER,
-    )
-    style_firm_body = ParagraphStyle(
-        "FirmBody",
-        fontName="Times-Roman",
-        fontSize=20,
-        leading=26,
-        alignment=TA_CENTER,
-    )
-    style_giant_foot = ParagraphStyle(
-        "GiantFoot",
-        fontName="Helvetica-Bold",
-        fontSize=109,
-        leading=115,
-        alignment=TA_CENTER,
-    )
+  style_normal_20 = ParagraphStyle(
+      "Norm20",
+      fontName="Times-Roman",
+      fontSize=20,
+      leading=26,
+      alignment=TA_LEFT,
+  )
+  style_bold_20 = ParagraphStyle(
+      "Bold20",
+      fontName="Times-Bold",
+      fontSize=20,
+      leading=26,
+      alignment=TA_LEFT,
+  )
+  style_firm_title = ParagraphStyle(
+      "FirmTitle",
+      fontName="Times-Bold",
+      fontSize=20,
+      leading=26,
+      alignment=TA_CENTER,
+  )
+  style_firm_body = ParagraphStyle(
+      "FirmBody",
+      fontName="Times-Roman",
+      fontSize=20,
+      leading=26,
+      alignment=TA_CENTER,
+  )
 
-    story = []
+  # Bumped size from 109 to 125 (~15% increase) for easier cutting
+  style_giant_foot = ParagraphStyle(
+      "GiantFoot",
+      fontName="Helvetica-Bold",
+      fontSize=125,
+      leading=132,
+      alignment=TA_CENTER,
+  )
 
-    client_lines = [
-        line.strip() for line in clients_text.split("\n") if line.strip()
-    ]
-    contact_lines = [
-        line.strip() for line in contacts_text.split("\n") if line.strip()
-    ]
+  story = []
 
-    party_elements = []
-    if len(client_lines) > 0:
-        party_elements.append(Paragraph(client_lines[0], style_normal_20))
-    if len(contact_lines) > 0:
-        party_elements.append(Paragraph(contact_lines[0], style_normal_20))
+  client_lines = [
+      line.strip() for line in clients_text.split("\n") if line.strip()
+  ]
+  contact_lines = [
+      line.strip() for line in contacts_text.split("\n") if line.strip()
+  ]
 
-    party_elements.append(Spacer(1, 14))
+  party_elements = []
+  if len(client_lines) > 0:
+    party_elements.append(Paragraph(client_lines[0], style_normal_20))
+  if len(contact_lines) > 0:
+    party_elements.append(Paragraph(contact_lines[0], style_normal_20))
 
-    if len(client_lines) > 1:
-        party_elements.append(Paragraph(client_lines[1], style_normal_20))
-    if len(contact_lines) > 1:
-        party_elements.append(Paragraph(contact_lines[1], style_normal_20))
+  party_elements.append(Spacer(1, 14))
 
-    col_w_left = 1.333 * 72
-    col_w_right = 6.346 * 72
+  if len(client_lines) > 1:
+    party_elements.append(Paragraph(client_lines[1], style_normal_20))
+  if len(contact_lines) > 1:
+    party_elements.append(Paragraph(contact_lines[1], style_normal_20))
 
-    top_table = Table(
-        [["", party_elements]], colWidths=[col_w_left, col_w_right]
-    )
-    top_table.setStyle(
-        TableStyle([
-            ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ])
-    )
-    story.append(top_table)
-    story.append(Spacer(1, 24))
+  col_w_left = 1.333 * 72
+  col_w_right = 6.346 * 72
 
-    story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
-    story.append(Spacer(1, 4))
-    story.append(
-        Paragraph(
-            "2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763",
-            style_firm_body,
-        )
-    )
-    story.append(Spacer(1, 4))
-    story.append(
-        Paragraph(
-            "TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092",
-            style_firm_body,
-        )
-    )
-    story.append(Spacer(1, 40))
+  top_table = Table(
+      [["", party_elements]], colWidths=[col_w_left, col_w_right]
+  )
+  top_table.setStyle(
+      TableStyle([
+          ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
+          ("VALIGN", (0, 0), (-1, -1), "TOP"),
+          ("TOPPADDING", (0, 0), (-1, -1), 6),
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+          ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
+          ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+      ])
+  )
+  story.append(top_table)
+  story.append(Spacer(1, 24))
 
-    full_matter_name = "Uncontested Divorce"
-    if matter_type == "CD":
-        full_matter_name = "Contested Divorce"
-    elif matter_type == "Annulment":
-        full_matter_name = "Annulment"
-    elif matter_type == "Variation":
-        full_matter_name = "Variation"
-    elif matter_type == "Others":
-        full_matter_name = "Others"
+  story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
+  story.append(Spacer(1, 4))
+  story.append(
+      Paragraph(
+          "2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763",
+          style_firm_body,
+      )
+  )
+  story.append(Spacer(1, 4))
+  story.append(
+      Paragraph(
+          "TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092",
+          style_firm_body,
+      )
+  )
+  story.append(Spacer(1, 40))
 
-    file_block_text = (
-        f"{matter_no}<br/>Opening date: {date_opened}<br/>Closure date:"
-    )
+  full_matter_name = "Uncontested Divorce"
+  if matter_type == "CD":
+    full_matter_name = "Contested Divorce"
+  elif matter_type == "Annulment":
+    full_matter_name = "Annulment"
+  elif matter_type == "Variation":
+    full_matter_name = "Variation"
+  elif matter_type == "Others":
+    full_matter_name = "Others"
 
-    matrix_rows = [
-        [
-            Paragraph("SUBJECT<br/>MATTER", style_bold_20),
-            Paragraph(full_matter_name, style_normal_20),
-        ],
-        [
-            Paragraph("FILE", style_normal_20),
-            Paragraph(file_block_text, style_normal_20),
-        ],
-        [
-            Paragraph("Legal Fee", style_normal_20),
-            Paragraph("CASH", style_normal_20),
-        ],
-        [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)],
-    ]
+  file_block_text = (
+      f"{matter_no}<br/>Opening date: {date_opened}<br/>Closure date:"
+  )
 
-    b_col1 = 1.596 * 72
-    b_col2 = 6.083 * 72
+  matrix_rows = [
+      [
+          Paragraph("SUBJECT<br/>MATTER", style_bold_20),
+          Paragraph(full_matter_name, style_normal_20),
+      ],
+      [
+          Paragraph("FILE", style_normal_20),
+          Paragraph(file_block_text, style_normal_20),
+      ],
+      [
+          Paragraph("Legal Fee", style_normal_20),
+          Paragraph("CASH", style_normal_20),
+      ],
+      [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)],
+  ]
 
-    bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2])
-    bottom_table.setStyle(
-        TableStyle([
-            ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ])
-    )
-    story.append(bottom_table)
-    story.append(Spacer(1, 54))
-    story.append(Paragraph(matter_no, style_giant_foot))
+  b_col1 = 1.596 * 72
+  b_col2 = 6.083 * 72
 
-    doc.build(story)
-    buffer.seek(0)
-    return buffer.getvalue()
+  bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2])
+  bottom_table.setStyle(
+      TableStyle([
+          ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
+          ("VALIGN", (0, 0), (-1, -1), "TOP"),
+          ("TOPPADDING", (0, 0), (-1, -1), 6),
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+          ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
+          ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+      ])
+  )
+
+  # LOCKED LAYOUT BLOCK: Nests bottom table and giant number with exact 2pt (2px visual equivalent) spacing
+  locked_block_table = Table(
+      [[bottom_table], [Paragraph(matter_no, style_giant_foot)]],
+      colWidths=[7.942 * 72],
+  )
+  locked_block_table.setStyle(
+      TableStyle([
+          ("VALIGN", (0, 0), (-1, -1), "TOP"),
+          ("TOPPADDING", (0, 0), (0, 0), 0),
+          ("BOTTOMPADDING", (0, 0), (0, 0), 2),  # Exactly 2pt gap below table
+          ("TOPPADDING", (0, 1), (0, 1), 2),
+          ("BOTTOMPADDING", (0, 1), (0, 1), 0),
+          ("LEFTPADDING", (0, 0), (-1, -1), 0),
+          ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+      ])
+  )
+
+  story.append(locked_block_table)
+
+  doc.build(story)
+  buffer.seek(0)
+  return buffer.getvalue()
 
 
 # --- 3. DOCX PARSER ENGINE ---
