@@ -475,8 +475,6 @@ if "pdf_binary_store" not in st.session_state:
     st.session_state["pdf_binary_store"] = {}
 if "synced_records" not in st.session_state:
     st.session_state["synced_records"] = set()
-if "last_processed_ts" not in st.session_state:
-    st.session_state["last_processed_ts"] = 0
 
 # --- SIDEBAR CONFIGURATION ---
 with st.sidebar:
@@ -1387,20 +1385,6 @@ with tab_crown:
         const blob = await Packer.toBlob(doc);
         saveAs(blob, `Crown Box Record (${cartonNo}).docx`);
 
-        // --- SLIDE DIRECTLY THROUGH THE WALL INTO PYTHON ---
-        try {
-          window.parent.postMessage({
-            type: "streamlit:setComponentValue",
-            value: JSON.stringify({
-              carton_no: cartonNo,
-              entries: fileQueue,
-              timestamp: Date.now()
-            })
-          }, "*");
-        } catch (e) {
-          console.error("Failed to post message to Streamlit parent:", e);
-        }
-
         if (autoIncrement) {
           fileQueue = [];
           renderQueue();
@@ -1418,156 +1402,150 @@ with tab_crown:
     </html>
     """
 
-    carton_payload = components.html(
-        crown_scanner_component, height=1050, scrolling=True
-    )
-
-    # Automatically ingest new cartons directly into crown_base.db
-    if carton_payload:
-      try:
-        data = json.loads(carton_payload)
-        c_no = data.get("carton_no", "UNKNOWN")
-        entries = data.get("entries", [])
-        ts = data.get("timestamp", 0)
-
-        # De-duplicate so it only writes once per export click
-        if (
-            ts != st.session_state["last_processed_ts"]
-            and os.path.exists("crown_base.db")
-            and entries
-        ):
-          conn = sqlite3.connect("crown_base.db")
-          cur = conn.cursor()
-          for item in entries:
-            cur.execute(
-                """
-                        INSERT INTO archive_records (carton_no, file_no, client_name, matter_type, target_metadata, source_file)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                (
-                    c_no,
-                    item["line1"],
-                    item["line2"],
-                    item["line3"],
-                    item["line4"],
-                    f"Live Scanner ({c_no})",
-                ),
-            )
-          conn.commit()
-          conn.close()
-          st.session_state["last_processed_ts"] = ts
-          st.toast(
-              f"📚 Carton {c_no} ({len(entries)} files) archived into Wing 3!",
-              icon="🏛️",
-          )
-      except Exception as err:
-        st.error(f"Auto-archive pipeline error: {err}")
+    components.html(crown_scanner_component, height=1050, scrolling=True)
 
 # ==============================================================================
 # WING 3: CROWN ARCHIVAL LOCATOR & SEARCH ENGINE
 # ==============================================================================
 with tab_locator:
-  st.markdown("### 🔍 Crown Worldwide Warehouse Archive Locator")
-  st.caption(
-      "Instant multi-index search across 8,000+ historical firm files,"
-      " physical cartons, and client jackets."
-  )
-
-  db_path = "crown_base.db"
-
-  if not os.path.exists(db_path):
-    st.error(
-        "⚠️ `crown_base.db` not found in repository root. Place your compiled"
-        " database file in the project folder."
+    st.markdown("### 🔍 Crown Worldwide Warehouse Archive Locator")
+    st.caption(
+        "Instant multi-index search across 8,000+ historical firm files, physical cartons, and client jackets."
     )
-  else:
-    # Top Metrics Bar
-    try:
-      conn = sqlite3.connect(db_path)
-      total_records = conn.execute(
-          "SELECT COUNT(*) FROM archive_records"
-      ).fetchone()[0]
-      total_cartons = conn.execute(
-          "SELECT COUNT(DISTINCT carton_no) FROM archive_records"
-      ).fetchone()[0]
-      conn.close()
 
-      col_m1, col_m2, col_m3 = st.columns(3)
-      with col_m1:
-        st.metric("Total Indexed Matters", f"{total_records:,}")
-      with col_m2:
-        st.metric("Total Physical Cartons", f"{total_cartons:,}")
-      with col_m3:
-        st.metric("Database Engine", "SQLite B-Tree WASM")
-    except Exception as e:
-      st.warning(f"Metadata read error: {e}")
+    db_path = "crown_base.db"
 
-    st.markdown("---")
+    if not os.path.exists(db_path):
+        st.error(
+            "⚠️ `crown_base.db` not found in repository root. Place your compiled database file in the project folder."
+        )
+    else:
+        # Top Metrics Bar (Wrapped in 10s timeout to prevent lockouts)
+        try:
+            conn = sqlite3.connect(db_path, timeout=10)
+            total_records = conn.execute(
+                "SELECT COUNT(*) FROM archive_records"
+            ).fetchone()[0]
+            total_cartons = conn.execute(
+                "SELECT COUNT(DISTINCT carton_no) FROM archive_records"
+            ).fetchone()[0]
+            conn.close()
 
-    # Search Bar & Filter Controls
-    search_col, filter_col = st.columns([3, 1])
-    with search_col:
-      search_query = st.text_input(
-          "Search Archives",
-          placeholder=(
-              "Search by Client Name, File No (e.g. 201900782), Property"
-              " Address, or Postal Code..."
-          ),
-          key="archive_search_input",
-      )
-    with filter_col:
-      field_filter = st.selectbox(
-          "Filter Field",
-          ["All Fields", "Client Name", "File Number", "Address / Case No"],
-      )
+            col_m1, col_m2, col_m3 = st.columns(3)
+            with col_m1:
+                st.metric("Total Indexed Matters", f"{total_records:,}")
+            with col_m2:
+                st.metric("Total Physical Cartons", f"{total_cartons:,}")
+            with col_m3:
+                st.metric("Database Engine", "SQLite B-Tree WASM")
+        except Exception as e:
+            st.warning(f"Metadata read error: {e}")
 
-    if search_query.strip():
-      q = f"%{search_query.strip()}%"
-      conn = sqlite3.connect(db_path)
+        # Ingestion Chute for New Scanned Cartons
+        with st.expander("📥 Ingest Newly Exported Carton (.docx)", expanded=False):
+            st.caption("Drop any newly exported Crown Box Record (`.docx`) here to permanently index its files into the search catalog.")
+            new_box_file = st.file_uploader("Upload exported carton .docx", type=["docx"], key="ingest_box_uploader")
+            if new_box_file:
+                if st.button("Slide Carton into Archive Catalog", type="primary"):
+                    try:
+                        doc = docx.Document(new_box_file)
+                        c_no = "UNKNOWN"
+                        if doc.tables and len(doc.tables[0].rows) > 0:
+                            header_cell = doc.tables[0].rows[0].cells[0].text
+                            c_match = re.search(r"Carton No\.?\s*([\s\S]+?)(?=CARTON DETAILS|$)", header_cell, re.IGNORECASE)
+                            c_no = re.sub(r"\s+", " ", c_match.group(1)).strip() if c_match else new_box_file.name.replace(".docx", "")
+                        
+                        inserted = 0
+                        conn = sqlite3.connect(db_path, timeout=10)
+                        cur = conn.cursor()
+                        for t in doc.tables:
+                            for row in t.rows[1:]:
+                                if len(row.cells) >= 2:
+                                    txt = row.cells[1].text.strip()
+                                    lines = [l.strip() for l in txt.split("\n") if l.strip()]
+                                    f_no, cl, mt, mt_data = "-", "-", "-", "-"
+                                    for line in lines:
+                                        if line.startswith("1."): f_no = re.sub(r"^1\.?\s*", "", line).strip()
+                                        elif line.startswith("2."): cl = re.sub(r"^2\.?\s*", "", line).strip()
+                                        elif line.startswith("3."): mt = re.sub(r"^3\.?\s*", "", line).strip()
+                                        elif line.startswith("4."): mt_data = re.sub(r"^4\.?\s*", "", line).strip()
+                                    if f_no != "-" or cl != "-":
+                                        cur.execute(
+                                            """INSERT INTO archive_records (carton_no, file_no, client_name, matter_type, target_metadata, source_file)
+                                               VALUES (?, ?, ?, ?, ?, ?)""",
+                                            (c_no, f_no, cl, mt, mt_data, new_box_file.name)
+                                        )
+                                        inserted += 1
+                        conn.commit()
+                        conn.close()
+                        st.success(f"Successfully indexed {inserted} matters from {c_no}!")
+                        st.rerun()
+                    except Exception as err:
+                        st.error(f"Ingestion failed: {err}")
 
-      if field_filter == "Client Name":
-        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+        st.markdown("---")
+
+        # Search Bar & Filter Controls
+        search_col, filter_col = st.columns([3, 1])
+        with search_col:
+            search_query = st.text_input(
+                "Search Archives",
+                placeholder="Search by Client Name, File No (e.g. 201900782), Property Address, or Postal Code...",
+                key="archive_search_input",
+            )
+        with filter_col:
+            field_filter = st.selectbox(
+                "Filter Field",
+                ["All Fields", "Client Name", "File Number", "Address / Case No"],
+            )
+
+        if search_query.strip():
+            q = f"%{search_query.strip()}%"
+            conn = sqlite3.connect(db_path, timeout=10)
+
+            if field_filter == "Client Name":
+                sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
                          FROM archive_records WHERE client_name LIKE ? ORDER BY id DESC LIMIT 100"""
-        params = (q,)
-      elif field_filter == "File Number":
-        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+                params = (q,)
+            elif field_filter == "File Number":
+                sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
                          FROM archive_records WHERE file_no LIKE ? ORDER BY id DESC LIMIT 100"""
-        params = (q,)
-      elif field_filter == "Address / Case No":
-        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+                params = (q,)
+            elif field_filter == "Address / Case No":
+                sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
                          FROM archive_records WHERE target_metadata LIKE ? ORDER BY id DESC LIMIT 100"""
-        params = (q,)
-      else:
-        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+                params = (q,)
+            else:
+                sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
                          FROM archive_records 
                          WHERE client_name LIKE ? OR file_no LIKE ? OR target_metadata LIKE ? OR carton_no LIKE ?
                          ORDER BY id DESC LIMIT 100"""
-        params = (q, q, q, q)
+                params = (q, q, q, q)
 
-      results = conn.execute(sql, params).fetchall()
-      conn.close()
+            results = conn.execute(sql, params).fetchall()
+            conn.close()
 
-      if results:
-        st.success(f"Found **{len(results)}** matching record(s):")
+            if results:
+                st.success(f"Found **{len(results)}** matching record(s):")
 
-        for r in results:
-          carton, f_no, client, matter, meta, src = r
+                for r in results:
+                    carton, f_no, client, matter, meta, src = r
 
-          with st.container():
-            st.markdown(
-                f"""
-                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #1e40af; border-radius:8px; padding:12px 16px; margin-bottom:10px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <span style="font-size:1.05rem; font-weight:700; color:#1e40af;">File: {f_no}</span>
-                                <span style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-size:0.8rem; font-weight:700; padding:3px 10px; border-radius:6px;">📦 Carton: {carton}</span>
+                    with st.container():
+                        st.markdown(
+                            f"""
+                            <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #1e40af; border-radius:8px; padding:12px 16px; margin-bottom:10px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <span style="font-size:1.05rem; font-weight:700; color:#1e40af;">File: {f_no}</span>
+                                    <span style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-size:0.8rem; font-weight:700; padding:3px 10px; border-radius:6px;">📦 Carton: {carton}</span>
+                                </div>
+                                <div style="font-size:0.95rem; font-weight:600; color:#0f172a; margin-bottom:4px;">Client: {client}</div>
+                                <div style="font-size:0.85rem; color:#059669; font-weight:600; margin-bottom:4px;">Matter: {matter}</div>
+                                {f'<div style="font-size:0.85rem; color:#475569;">📍 Property / Case: {meta}</div>' if meta and meta != '-' else ''}
+                                <div style="font-size:0.75rem; color:#94a3b8; margin-top:6px;">Source: {src}</div>
                             </div>
-                            <div style="font-size:0.95rem; font-weight:600; color:#0f172a; margin-bottom:4px;">Client: {client}</div>
-                            <div style="font-size:0.85rem; color:#059669; font-weight:600; margin-bottom:4px;">Matter: {matter}</div>
-                            {f'<div style="font-size:0.85rem; color:#475569;">📍 Property / Case: {meta}</div>' if meta and meta != '-' else ''}
-                            <div style="font-size:0.75rem; color:#94a3b8; margin-top:6px;">Source: {src}</div>
-                        </div>
-                        """,
-                unsafe_allow_html=True,
-            )
-      else:
-        st.info(f"No records found matching '{search_query.strip()}'.")
+                            """,
+                            unsafe_allow_html=True,
+                        )
+            else:
+                st.info(f"No records found matching '{search_query.strip()}'.")
