@@ -57,29 +57,42 @@ st.markdown(
             margin-top: 4px;
         }
         
-        /* Modern Tab Overhaul */
+        /* Modern Tab Overhaul (No 1px Clipping) */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
+            gap: 12px;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 2px;
+            overflow: visible !important;
         }
         
         .stTabs [data-baseweb="tab"] {
             height: 48px;
-            white-space: pre-wrap;
+            white-space: nowrap !important;
             border-radius: 8px 8px 0px 0px;
-            padding: 10px 20px;
+            padding: 10px 22px !important;
             font-weight: 600;
             font-size: 0.92rem;
             color: #64748b;
             border: none;
             background-color: transparent;
+            overflow: visible !important;
+        }
+        
+        .stTabs [data-baseweb="tab"] div {
+            overflow: visible !important;
         }
         
         .stTabs [aria-selected="true"] {
             color: #1e40af !important;
             border-bottom: 3px solid #1e40af !important;
             background-color: #f8fafc !important;
+        }
+        
+        /* Fix Metric Truncation */
+        [data-testid="stMetricValue"] {
+            font-size: 1.65rem !important;
+            white-space: normal !important;
+            word-break: break-word !important;
         }
         
         /* Upload Area Styling */
@@ -462,6 +475,8 @@ if "pdf_binary_store" not in st.session_state:
     st.session_state["pdf_binary_store"] = {}
 if "synced_records" not in st.session_state:
     st.session_state["synced_records"] = set()
+if "last_processed_ts" not in st.session_state:
+    st.session_state["last_processed_ts"] = 0
 
 # --- SIDEBAR CONFIGURATION ---
 with st.sidebar:
@@ -730,7 +745,6 @@ with tab_intake:
 # WING 2: CROWN BOX ARCHIVAL TERMINAL (INTEGRATED SCANNER & COMPILER)
 # ==============================================================================
 with tab_crown:
-    # Full client-side Tesseract OCR + docx table engine embedded as an isolated iframe component
     crown_scanner_component = """
     <!DOCTYPE html>
     <html lang="en">
@@ -1373,6 +1387,20 @@ with tab_crown:
         const blob = await Packer.toBlob(doc);
         saveAs(blob, `Crown Box Record (${cartonNo}).docx`);
 
+        // --- SLIDE DIRECTLY THROUGH THE WALL INTO PYTHON ---
+        try {
+          window.parent.postMessage({
+            type: "streamlit:setComponentValue",
+            value: JSON.stringify({
+              carton_no: cartonNo,
+              entries: fileQueue,
+              timestamp: Date.now()
+            })
+          }, "*");
+        } catch (e) {
+          console.error("Failed to post message to Streamlit parent:", e);
+        }
+
         if (autoIncrement) {
           fileQueue = [];
           renderQueue();
@@ -1390,7 +1418,50 @@ with tab_crown:
     </html>
     """
 
-    components.html(crown_scanner_component, height=1050, scrolling=True)
+    carton_payload = components.html(
+        crown_scanner_component, height=1050, scrolling=True
+    )
+
+    # Automatically ingest new cartons directly into crown_base.db
+    if carton_payload:
+      try:
+        data = json.loads(carton_payload)
+        c_no = data.get("carton_no", "UNKNOWN")
+        entries = data.get("entries", [])
+        ts = data.get("timestamp", 0)
+
+        # De-duplicate so it only writes once per export click
+        if (
+            ts != st.session_state["last_processed_ts"]
+            and os.path.exists("crown_base.db")
+            and entries
+        ):
+          conn = sqlite3.connect("crown_base.db")
+          cur = conn.cursor()
+          for item in entries:
+            cur.execute(
+                """
+                        INSERT INTO archive_records (carton_no, file_no, client_name, matter_type, target_metadata, source_file)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                (
+                    c_no,
+                    item["line1"],
+                    item["line2"],
+                    item["line3"],
+                    item["line4"],
+                    f"Live Scanner ({c_no})",
+                ),
+            )
+          conn.commit()
+          conn.close()
+          st.session_state["last_processed_ts"] = ts
+          st.toast(
+              f"📚 Carton {c_no} ({len(entries)} files) archived into Wing 3!",
+              icon="🏛️",
+          )
+      except Exception as err:
+        st.error(f"Auto-archive pipeline error: {err}")
 
 # ==============================================================================
 # WING 3: CROWN ARCHIVAL LOCATOR & SEARCH ENGINE
@@ -1483,7 +1554,8 @@ with tab_locator:
           carton, f_no, client, matter, meta, src = r
 
           with st.container():
-            st.markdown(f"""
+            st.markdown(
+                f"""
                         <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #1e40af; border-radius:8px; padding:12px 16px; margin-bottom:10px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <span style="font-size:1.05rem; font-weight:700; color:#1e40af;">File: {f_no}</span>
@@ -1494,6 +1566,8 @@ with tab_locator:
                             {f'<div style="font-size:0.85rem; color:#475569;">📍 Property / Case: {meta}</div>' if meta and meta != '-' else ''}
                             <div style="font-size:0.75rem; color:#94a3b8; margin-top:6px;">Source: {src}</div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """,
+                unsafe_allow_html=True,
+            )
       else:
         st.info(f"No records found matching '{search_query.strip()}'.")
