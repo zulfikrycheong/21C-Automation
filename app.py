@@ -26,87 +26,129 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom Executive Theme Injection (Safe & Theme-Compatible)
+# Custom Executive Theme Injection (Dark Charcoal & Brushed Gold)
 st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
+        /* Global Typography & Font Family */
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #f3f4f6;
+        }
+        
+        /* Deep Matte Charcoal Workspace Background */
+        .stApp {
+            background-color: #0f1117 !important;
+        }
+        
+        /* Cards & Containers Surface */
+        [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+            background-color: transparent;
         }
         
         .main-header {
             padding: 0.8rem 0rem 1.4rem 0rem;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #21262d;
             margin-bottom: 1.5rem;
         }
         
         .suite-title {
             font-size: 1.85rem;
             font-weight: 800;
+            color: #f3f4f6;
             letter-spacing: -0.5px;
             margin: 0;
         }
         
         .suite-subtitle {
             font-size: 0.95rem;
-            color: #64748b;
+            color: #8b949e;
             font-weight: 500;
             margin-top: 4px;
         }
         
-        /* Modern Tab Overhaul — Fixes text artifacts and highlights cleanly */
+        /* --- EXECUTIVE WING TABS (Brushed Gold & Matte Overhaul) --- */
         .stTabs [data-baseweb="tab-list"] {
             gap: 12px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid #21262d;
             padding-bottom: 2px;
             overflow: visible !important;
+            background-color: transparent !important;
         }
         
         .stTabs [data-baseweb="tab"] {
             height: 48px;
             white-space: nowrap !important;
-            border-radius: 8px 8px 0px 0px;
+            border-radius: 6px 6px 0px 0px;
             padding: 10px 22px !important;
             font-weight: 600;
             font-size: 0.92rem;
+            color: #8b949e;
             border: none !important;
-            background-color: transparent !important;
+            background-color: #161922 !important;
             overflow: visible !important;
+            outline: none !important;
+            box-shadow: none !important;
+            transition: all 0.2s ease;
+        }
+        
+        .stTabs [data-baseweb="tab"]:hover {
+            color: #d4af37 !important;
+            background-color: #1f2430 !important;
+        }
+        
+        .stTabs [data-baseweb="tab"]:focus, 
+        .stTabs [data-baseweb="tab"]:active {
+            outline: none !important;
+            box-shadow: none !important;
         }
         
         .stTabs [data-baseweb="tab"] div {
             overflow: visible !important;
+            color: inherit !important;
         }
         
+        /* Active Wing Tab: Brushed Gold Bottom Border & Text */
         .stTabs [aria-selected="true"] {
-            color: #1e40af !important;
-            border-bottom: 3px solid #1e40af !important;
+            color: #d4af37 !important;
+            border-bottom: 3px solid #d4af37 !important;
+            background-color: #1f2430 !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
         
-        /* Fix Metric Value Truncation */
+        /* Kill Native Streamlit Red/Blue Focus Rings */
+        input:focus, select:focus, textarea:focus, button:focus {
+            border-color: #d4af37 !important;
+            box-shadow: 0 0 0 1px #d4af37 !important;
+        }
+        
+        /* Fix Metric Value Text */
         [data-testid="stMetricValue"] {
             font-size: 1.65rem !important;
             white-space: normal !important;
             word-break: break-word !important;
+            color: #f3f4f6 !important;
         }
         
         /* Upload Area Styling */
         [data-testid="stFileUploaderDropzone"] {
             padding: 3.5rem 2rem !important;
-            border-radius: 12px !important;
-            border: 2px dashed #cbd5e1 !important;
+            border-radius: 10px !important;
+            background-color: #161922 !important;
+            border: 2px dashed #30363d !important;
             transition: all 0.2s ease-in-out;
         }
         [data-testid="stFileUploaderDropzone"]:hover {
-            border-color: #1e40af !important;
+            border-color: #d4af37 !important;
+            background-color: #1f2430 !important;
         }
     </style>
     """,
     unsafe_allow_html=True,
 )
-
 # --- WORKSPACE TOP BAR ---
 c_logo, c_title = st.columns([1, 4])
 with c_logo:
