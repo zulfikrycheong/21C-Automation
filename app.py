@@ -493,10 +493,11 @@ with st.sidebar:
         st.code(svc_email, language="text")
         st.caption("Ensure 'Notify people' is unchecked before sharing.")
 
-# --- DUAL-WING WORKSPACE TABS ---
-tab_intake, tab_crown = st.tabs([
+# --- DUAL-WING TO TRIPLE-WING SUITE TABS ---
+tab_intake, tab_crown, tab_locator = st.tabs([
     "📥 Intake Pipeline & Cover Generator",
     "📦 Crown Box Archival Terminal",
+    "🔍 Warehouse Archive Locator",
 ])
 
 # ==============================================================================
@@ -1389,3 +1390,109 @@ with tab_crown:
     """
 
     components.html(crown_scanner_component, height=1050, scrolling=True)
+
+# ==============================================================================
+# WING 3: CROWN ARCHIVAL LOCATOR & SEARCH ENGINE
+# ==============================================================================
+with tab_locator:
+  st.markdown("### 🔍 Crown Worldwide Warehouse Archive Locator")
+  st.caption(
+      "Instant multi-index search across 8,000+ historical firm files,"
+      " physical cartons, and client jackets."
+  )
+
+  db_path = "crown_base.db"
+
+  if not os.path.exists(db_path):
+    st.error(
+        "⚠️ `crown_base.db` not found in repository root. Place your compiled"
+        " database file in the project folder."
+    )
+  else:
+    # Top Metrics Bar
+    try:
+      conn = sqlite3.connect(db_path)
+      total_records = conn.execute(
+          "SELECT COUNT(*) FROM archive_records"
+      ).fetchone()[0]
+      total_cartons = conn.execute(
+          "SELECT COUNT(DISTINCT carton_no) FROM archive_records"
+      ).fetchone()[0]
+      conn.close()
+
+      col_m1, col_m2, col_m3 = st.columns(3)
+      with col_m1:
+        st.metric("Total Indexed Matters", f"{total_records:,}")
+      with col_m2:
+        st.metric("Total Physical Cartons", f"{total_cartons:,}")
+      with col_m3:
+        st.metric("Database Engine", "SQLite B-Tree WASM")
+    except Exception as e:
+      st.warning(f"Metadata read error: {e}")
+
+    st.markdown("---")
+
+    # Search Bar & Filter Controls
+    search_col, filter_col = st.columns([3, 1])
+    with search_col:
+      search_query = st.text_input(
+          "Search Archives",
+          placeholder=(
+              "Search by Client Name, File No (e.g. 201900782), Property"
+              " Address, or Postal Code..."
+          ),
+          key="archive_search_input",
+      )
+    with filter_col:
+      field_filter = st.selectbox(
+          "Filter Field",
+          ["All Fields", "Client Name", "File Number", "Address / Case No"],
+      )
+
+    if search_query.strip():
+      q = f"%{search_query.strip()}%"
+      conn = sqlite3.connect(db_path)
+
+      if field_filter == "Client Name":
+        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+                         FROM archive_records WHERE client_name LIKE ? ORDER BY id DESC LIMIT 100"""
+        params = (q,)
+      elif field_filter == "File Number":
+        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+                         FROM archive_records WHERE file_no LIKE ? ORDER BY id DESC LIMIT 100"""
+        params = (q,)
+      elif field_filter == "Address / Case No":
+        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+                         FROM archive_records WHERE target_metadata LIKE ? ORDER BY id DESC LIMIT 100"""
+        params = (q,)
+      else:
+        sql = """SELECT carton_no, file_no, client_name, matter_type, target_metadata, source_file 
+                         FROM archive_records 
+                         WHERE client_name LIKE ? OR file_no LIKE ? OR target_metadata LIKE ? OR carton_no LIKE ?
+                         ORDER BY id DESC LIMIT 100"""
+        params = (q, q, q, q)
+
+      results = conn.execute(sql, params).fetchall()
+      conn.close()
+
+      if results:
+        st.success(f"Found **{len(results)}** matching record(s):")
+
+        for r in results:
+          carton, f_no, client, matter, meta, src = r
+
+          with st.container():
+            st.markdown(f"""
+                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #1e40af; border-radius:8px; padding:12px 16px; margin-bottom:10px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:1.05rem; font-weight:700; color:#1e40af;">File: {f_no}</span>
+                                <span style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-size:0.8rem; font-weight:700; padding:3px 10px; border-radius:6px;">📦 Carton: {carton}</span>
+                            </div>
+                            <div style="font-size:0.95rem; font-weight:600; color:#0f172a; margin-bottom:4px;">Client: {client}</div>
+                            <div style="font-size:0.85rem; color:#059669; font-weight:600; margin-bottom:4px;">Matter: {matter}</div>
+                            {f'<div style="font-size:0.85rem; color:#475569;">📍 Property / Case: {meta}</div>' if meta and meta != '-' else ''}
+                            <div style="font-size:0.75rem; color:#94a3b8; margin-top:6px;">Source: {src}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+      else:
+        st.info(f"No records found matching '{search_query.strip()}'.")
