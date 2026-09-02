@@ -740,7 +740,7 @@ with tab_intake:
             )
 
 # ==============================================================================
-# WING 2: CROWN BOX ARCHIVAL TERMINAL (INTEGRATED SCANNER & COMPILER)
+# WING 2: CROWN BOX ARCHIVAL TERMINAL (WITH LOCALSTORAGE QUEUE PERSISTENCE)
 # ==============================================================================
 with tab_crown:
     crown_scanner_component = """
@@ -832,7 +832,7 @@ with tab_crown:
 
     <div class="card">
       <label class="form-label">Carton Number (Box Identifier)</label>
-      <input type="text" id="cartonNumberInput" class="form-control" placeholder="e.g. YYLEE – 21C - 282- YX">
+      <input type="text" id="cartonNumberInput" class="form-control" placeholder="e.g. YYLEE – 21C - 282- YX" oninput="saveCartonState()">
       
       <label class="form-label">Active Archive Department</label>
       <select id="departmentSelect" class="form-control" onchange="changeDepartment()">
@@ -961,9 +961,25 @@ with tab_crown:
       let videoStream = null;
 
       window.addEventListener('DOMContentLoaded', () => {
+        loadCartonState();
         changeDepartment();
         updateCapacityDisplay();
       });
+
+      function saveCartonState() {
+        const cartonNo = document.getElementById('cartonNumberInput').value;
+        localStorage.setItem('chambersos_active_carton', cartonNo);
+        localStorage.setItem('chambersos_active_queue', JSON.stringify(fileQueue));
+      }
+
+      function loadCartonState() {
+        const savedCarton = localStorage.getItem('chambersos_active_carton');
+        const savedQueue = localStorage.getItem('chambersos_active_queue');
+        if (savedCarton) document.getElementById('cartonNumberInput').value = savedCarton;
+        if (savedQueue) {
+          try { fileQueue = JSON.parse(savedQueue); renderQueue(); } catch(e) { fileQueue = []; }
+        }
+      }
 
       function changeDepartment() {
         const dept = document.getElementById('departmentSelect').value;
@@ -1121,7 +1137,6 @@ with tab_crown:
         const FIRM_BLACKLIST = ["059763", "62241848", "62233092", "6224", "6223", "06-17", "21 CHAMBERS", "YY LEE", "HAVELOCK"];
         const dept = document.getElementById('departmentSelect').value;
 
-        // 1. File Number
         let fileNo = "";
         const matches = rawText.match(/\\b20[12]\\d{5,6}\\b|\\bLP\\.\\d{6,8}\\b/g) || [];
         const valid = matches.filter(n => !FIRM_BLACKLIST.includes(n));
@@ -1132,7 +1147,6 @@ with tab_crown:
           if (fallback && !FIRM_BLACKLIST.includes(fallback[1])) fileNo = fallback[1];
         }
 
-        // 2. Matter Type (Priority sieve)
         const upper = rawText.toUpperCase();
         let matchedMatter = (dept === "CONVEYANCING") ? "Purchase" : "UD";
 
@@ -1159,7 +1173,6 @@ with tab_crown:
           else if (upper.includes("VARIATION")) matchedMatter = "UV";
         }
 
-        // 3. Client Name & Roles
         let client = "";
         const lines = rawText.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
         for (let line of lines) {
@@ -1184,7 +1197,6 @@ with tab_crown:
           }
         }
 
-        // 4. Property Address / Metadata
         let propertyAddress = "-";
         if (dept === "CONVEYANCING") {
           const postalMatch = rawText.match(/(?:Singapore\\s*|\\(?S\\)?\\s*\\(?)(\\d{6})\\)?/i);
@@ -1279,6 +1291,7 @@ with tab_crown:
 
         renderQueue();
         updateCapacityDisplay();
+        saveCartonState();
         closeModal();
 
         const dept = document.getElementById('departmentSelect').value;
@@ -1295,6 +1308,7 @@ with tab_crown:
           fileQueue.splice(index, 1);
           renderQueue();
           updateCapacityDisplay();
+          saveCartonState();
         }
       }
 
@@ -1388,11 +1402,13 @@ with tab_crown:
         if (autoIncrement) {
           fileQueue = [];
           renderQueue();
+          localStorage.removeItem('chambersos_active_queue');
           const numMatch = cartonNo.match(/\\d+/g);
           if (numMatch) {
             const lastNum = numMatch[numMatch.length - 1];
             const nextNum = parseInt(lastNum, 10) + 1;
             cartonInput.value = cartonNo.replace(new RegExp(lastNum + "(?!.*" + lastNum + ")"), nextNum);
+            saveCartonState();
           }
           updateCapacityDisplay();
         }
@@ -1420,7 +1436,9 @@ with tab_locator:
             "⚠️ `crown_base.db` not found in repository root. Place your compiled database file in the project folder."
         )
     else:
-        # Top Metrics Bar (Wrapped in 10s timeout to prevent lockouts)
+        # Top Metrics Bar & Database Export Tool (Cloud Safeguard)
+        col_metrics, col_download = st.columns([3, 1])
+
         try:
             conn = sqlite3.connect(db_path, timeout=10)
             total_records = conn.execute(
@@ -1431,19 +1449,32 @@ with tab_locator:
             ).fetchone()[0]
             conn.close()
 
-            col_m1, col_m2, col_m3 = st.columns(3)
-            with col_m1:
-                st.metric("Total Indexed Matters", f"{total_records:,}")
-            with col_m2:
-                st.metric("Total Physical Cartons", f"{total_cartons:,}")
-            with col_m3:
-                st.metric("Database Engine", "SQLite B-Tree WASM")
+            with col_metrics:
+                cm1, cm2, cm3 = st.columns(3)
+                with cm1:
+                    st.metric("Total Indexed Matters", f"{total_records:,}")
+                with cm2:
+                    st.metric("Total Physical Cartons", f"{total_cartons:,}")
+                with cm3:
+                    st.metric("Database Engine", "SQLite B-Tree")
+
+            with col_download:
+                st.write("")
+                with open(db_path, "rb") as db_file:
+                    st.download_button(
+                        label="📥 Download Master DB",
+                        data=db_file,
+                        file_name="crown_base.db",
+                        mime="application/x-sqlite3",
+                        help="Download the updated SQLite database file to commit back to Git after batch scanning.",
+                        use_container_width=True,
+                    )
         except Exception as e:
             st.warning(f"Metadata read error: {e}")
 
-        # Ingestion Chute for New Scanned Cartons
+        # Ingestion Chute for Newly Exported Cartons
         with st.expander("📥 Ingest Newly Exported Carton (.docx)", expanded=False):
-            st.caption("Drop any newly exported Crown Box Record (`.docx`) here to permanently index its files into the search catalog.")
+            st.caption("Drop any newly exported Crown Box Record (`.docx`) here to permanently index its files into the search catalog with duplicate protection.")
             new_box_file = st.file_uploader("Upload exported carton .docx", type=["docx"], key="ingest_box_uploader")
             if new_box_file:
                 if st.button("Slide Carton into Archive Catalog", type="primary"):
@@ -1456,8 +1487,13 @@ with tab_locator:
                             c_no = re.sub(r"\s+", " ", c_match.group(1)).strip() if c_match else new_box_file.name.replace(".docx", "")
                         
                         inserted = 0
+                        duplicates = 0
                         conn = sqlite3.connect(db_path, timeout=10)
                         cur = conn.cursor()
+                        
+                        # Ensure unique constraint exists to block duplicates safely
+                        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_carton_file ON archive_records(carton_no, file_no)")
+
                         for t in doc.tables:
                             for row in t.rows[1:]:
                                 if len(row.cells) >= 2:
@@ -1470,15 +1506,19 @@ with tab_locator:
                                         elif line.startswith("3."): mt = re.sub(r"^3\.?\s*", "", line).strip()
                                         elif line.startswith("4."): mt_data = re.sub(r"^4\.?\s*", "", line).strip()
                                     if f_no != "-" or cl != "-":
-                                        cur.execute(
-                                            """INSERT INTO archive_records (carton_no, file_no, client_name, matter_type, target_metadata, source_file)
-                                               VALUES (?, ?, ?, ?, ?, ?)""",
-                                            (c_no, f_no, cl, mt, mt_data, new_box_file.name)
-                                        )
-                                        inserted += 1
+                                        try:
+                                            cur.execute(
+                                                """INSERT INTO archive_records (carton_no, file_no, client_name, matter_type, target_metadata, source_file)
+                                                   VALUES (?, ?, ?, ?, ?, ?)""",
+                                                (c_no, f_no, cl, mt, mt_data, new_box_file.name)
+                                            )
+                                            inserted += 1
+                                        except sqlite3.IntegrityError:
+                                            duplicates += 1
+
                         conn.commit()
                         conn.close()
-                        st.success(f"Successfully indexed {inserted} matters from {c_no}!")
+                        st.success(f"Successfully indexed {inserted} matters from {c_no}! ({duplicates} duplicates skipped)")
                         st.rerun()
                     except Exception as err:
                         st.error(f"Ingestion failed: {err}")
