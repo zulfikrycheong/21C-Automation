@@ -26,53 +26,40 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom Executive Theme Injection (Dark Charcoal & Brushed Gold)
+# Custom Executive Theme Injection (Theme-Aware & Native Streamlit Compatible)
 st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        /* Global Typography & Font Family */
+        /* Global Typography */
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: #f3f4f6;
-        }
-        
-        /* Deep Matte Charcoal Workspace Background */
-        .stApp {
-            background-color: #0f1117 !important;
-        }
-        
-        /* Cards & Containers Surface */
-        [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
-            background-color: transparent;
         }
         
         .main-header {
             padding: 0.8rem 0rem 1.4rem 0rem;
-            border-bottom: 1px solid #21262d;
+            border-bottom: 1px solid rgba(128, 128, 128, 0.2);
             margin-bottom: 1.5rem;
         }
         
         .suite-title {
             font-size: 1.85rem;
             font-weight: 800;
-            color: #f3f4f6;
             letter-spacing: -0.5px;
             margin: 0;
         }
         
         .suite-subtitle {
             font-size: 0.95rem;
-            color: #8b949e;
             font-weight: 500;
             margin-top: 4px;
         }
         
-        /* --- EXECUTIVE WING TABS (Brushed Gold & Matte Overhaul) --- */
+        /* --- EXECUTIVE WING TABS (Clean Brushed Gold Overhaul) --- */
         .stTabs [data-baseweb="tab-list"] {
             gap: 12px;
-            border-bottom: 2px solid #21262d;
+            border-bottom: 2px solid rgba(128, 128, 128, 0.2);
             padding-bottom: 2px;
             overflow: visible !important;
             background-color: transparent !important;
@@ -85,9 +72,8 @@ st.markdown(
             padding: 10px 22px !important;
             font-weight: 600;
             font-size: 0.92rem;
-            color: #8b949e;
             border: none !important;
-            background-color: #161922 !important;
+            background-color: rgba(128, 128, 128, 0.08) !important;
             overflow: visible !important;
             outline: none !important;
             box-shadow: none !important;
@@ -96,7 +82,6 @@ st.markdown(
         
         .stTabs [data-baseweb="tab"]:hover {
             color: #d4af37 !important;
-            background-color: #1f2430 !important;
         }
         
         .stTabs [data-baseweb="tab"]:focus, 
@@ -110,16 +95,16 @@ st.markdown(
             color: inherit !important;
         }
         
-        /* Active Wing Tab: Brushed Gold Bottom Border & Text */
+        /* Active Wing Tab: Brushed Gold Bottom Accent */
         .stTabs [aria-selected="true"] {
             color: #d4af37 !important;
             border-bottom: 3px solid #d4af37 !important;
-            background-color: #1f2430 !important;
+            background-color: rgba(212, 175, 55, 0.08) !important;
             outline: none !important;
             box-shadow: none !important;
         }
         
-        /* Kill Native Streamlit Red/Blue Focus Rings */
+        /* Kill Native Streamlit Red/Blue Focus Rings & Replace with Brushed Gold */
         input:focus, select:focus, textarea:focus, button:focus {
             border-color: #d4af37 !important;
             box-shadow: 0 0 0 1px #d4af37 !important;
@@ -130,25 +115,23 @@ st.markdown(
             font-size: 1.65rem !important;
             white-space: normal !important;
             word-break: break-word !important;
-            color: #f3f4f6 !important;
         }
         
         /* Upload Area Styling */
         [data-testid="stFileUploaderDropzone"] {
             padding: 3.5rem 2rem !important;
             border-radius: 10px !important;
-            background-color: #161922 !important;
-            border: 2px dashed #30363d !important;
+            border: 2px dashed rgba(128, 128, 128, 0.3) !important;
             transition: all 0.2s ease-in-out;
         }
         [data-testid="stFileUploaderDropzone"]:hover {
             border-color: #d4af37 !important;
-            background-color: #1f2430 !important;
         }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
 # --- WORKSPACE TOP BAR ---
 c_logo, c_title = st.columns([1, 4])
 with c_logo:
