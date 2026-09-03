@@ -505,6 +505,45 @@ def render_pdf_preview(pdf_bytes):
         st.image(image, caption=f"Page {i + 1}", use_container_width=True)
 
 
+def sync_closed_cartons_from_cloud(db_path):
+    """Pulls all closed carton_sync/*.json files from the repo and
+    ingests any not already recorded in ingested_cartons."""
+    paths = repo_sync.list_carton_sync_files()
+    conn = sqlite3.connect(db_path, timeout=10)
+    cur = conn.cursor()
+    already = {row[0] for row in cur.execute("SELECT carton_no FROM ingested_cartons")}
+    results = []
+    for path in paths:
+        data = repo_sync.fetch_carton_file(path)
+        if not data or data.get("status") != "closed":
+            continue
+        c_no = data.get("carton_no", "UNKNOWN")
+        if c_no in already:
+            continue
+        inserted = 0
+        for item in data.get("queue", []):
+            try:
+                cur.execute(
+                    """INSERT INTO archive_records
+                       (carton_no, file_no, client_name, matter_type, target_metadata, source_file)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (c_no, item.get("line1", "-"), item.get("line2", "-"),
+                     item.get("line3", "-"), item.get("line4", "-"), path),
+                )
+                inserted += 1
+            except sqlite3.IntegrityError:
+                pass
+        cur.execute(
+            "INSERT OR REPLACE INTO ingested_cartons (carton_no, ingested_at) VALUES (?, ?)",
+            (c_no, datetime.now().isoformat()),
+        )
+        conn.commit()
+        if inserted:
+            results.append((c_no, inserted))
+    conn.close()
+    return results
+
+
 # --- INITIALIZE SESSION STATE ---
 if "uploader_key" not in st.session_state:
     st.session_state["uploader_key"] = 0
@@ -783,7 +822,7 @@ with tab_intake:
 # ==============================================================================
 with tab_crown:
     st.markdown("### 📦 Crown Box Archival Terminal (Cloud Synced)")
-    
+
     with open("scanner_ui.html", "r", encoding="utf-8") as f:
         html_content = f.read()
 
@@ -797,7 +836,7 @@ with tab_crown:
     )
 
     components.html(crown_scanner_component, height=1050, scrolling=True)
-  
+
 # ==============================================================================
 # WING 3: CROWN ARCHIVAL LOCATOR & SEARCH ENGINE
 # ==============================================================================
@@ -814,6 +853,29 @@ with tab_locator:
             "⚠️ `crown_base.db` not found in repository root. Place your compiled database file in the project folder."
         )
     else:
+        conn = sqlite3.connect(db_path, timeout=10)
+        conn.execute("""CREATE TABLE IF NOT EXISTS ingested_cartons (
+            carton_no TEXT PRIMARY KEY,
+            ingested_at TEXT
+        )""")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_carton_file ON archive_records(carton_no, file_no)")
+        conn.commit()
+        conn.close()
+
+        last_check = st.session_state.get("last_cloud_sync_check")
+        now_ts = datetime.now().timestamp()
+        if last_check is None or (now_ts - last_check) > 120:
+            newly = sync_closed_cartons_from_cloud(db_path)
+            st.session_state["last_cloud_sync_check"] = now_ts
+            for c_no, cnt in newly:
+                st.toast(f"Auto-indexed {cnt} matters from closed carton {c_no}", icon="📦")
+
+        if st.button("🔄 Force Sync Closed Cartons Now"):
+            with st.spinner("Checking cloud for closed cartons..."):
+                newly = sync_closed_cartons_from_cloud(db_path)
+            st.success(f"Indexed {len(newly)} new carton(s)." if newly else "Nothing new to index.")
+            st.rerun()
+
         # Top Metrics Bar & Database Export Tool (Cloud Safeguard)
         col_metrics, col_download = st.columns([3, 1])
 
