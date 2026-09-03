@@ -802,7 +802,20 @@ with tab_crown:
         if cloud_data:
           st.session_state["cloud_synced_queue"] = cloud_data.get("queue", [])
           st.session_state["cloud_carton_no"] = cloud_data.get("carton_no", "")
-          st.toast("Synced latest queue from cloud!", icon="📡")
+          
+          # Inject pulled queue directly into localStorage via a tiny script execution
+          queue_json = json.dumps(cloud_data.get("queue", []))
+          carton_val = cloud_data.get("carton_no", "")
+          
+          components.html(f"""
+            <script>
+              localStorage.setItem('chambersos_active_queue', '{queue_json}');
+              localStorage.setItem('chambersos_active_carton', '{carton_val}');
+              window.parent.location.reload();
+            </script>
+          """, height=0)
+          
+          st.toast("Synced latest queue from cloud and updated terminal!", icon="📡")
           st.rerun()
         else:
           st.warning("Could not reach sync channel.")
