@@ -854,6 +854,15 @@ with tab_locator:
         )
     else:
         conn = sqlite3.connect(db_path, timeout=10)
+        dupes = conn.execute("""
+            SELECT carton_no, file_no, COUNT(*) as cnt
+            FROM archive_records
+            GROUP BY carton_no, file_no
+            HAVING cnt > 1
+        """).fetchall()
+        if dupes:
+            st.warning(f"⚠️ Found {len(dupes)} duplicate carton/file combos blocking the index. See below.")
+            st.dataframe(dupes)
         conn.execute("""CREATE TABLE IF NOT EXISTS ingested_cartons (
             carton_no TEXT PRIMARY KEY,
             ingested_at TEXT
