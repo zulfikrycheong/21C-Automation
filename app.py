@@ -779,79 +779,17 @@ with tab_intake:
             )
 
 # ==============================================================================
-# WING 2: CROWN BOX ARCHIVAL TERMINAL (WITH LOCALSTORAGE QUEUE PERSISTENCE)
-# ==============================================================================
-with tab_crown:
-    st.markdown("### 📦 Crown Box Archival Terminal (Cloud Synced)")
-
-    # --- GBA WIRELESS ADAPTER SYNC WIDGET ---
-    with st.expander("📡 Cloud Sync & Multi-Terminal Status", expanded=False):
-        col_sync1, col_sync2 = st.columns([3, 1])
-        with col_sync1:
-            st.markdown(
-                "**Repository Radio Channel Active**<br><span"
-                " style='color: #64748b; font-size: 0.85rem;'>Changes sync across"
-                " mobile and desktop terminals in real-time.</span>",
-                unsafe_allow_html=True,
-            )
-            
-        with col_sync2:
-            if st.button("🔄 Pull", use_container_width=True, key="pull_cloud_btn"):
-                cloud_data, _ = repo_sync.pull_active_session()
-                if cloud_data:
-                    pulled_queue = cloud_data.get("queue", [])
-                    pulled_carton = cloud_data.get("carton_no", "YYLEE-BOX-01")
-                    
-                    # Force update session state immediately
-                    st.session_state["cloud_synced_queue"] = pulled_queue
-                    st.session_state["cloud_carton_no"] = pulled_carton
-
-                    queue_json = json.dumps(pulled_queue)
-                    carton_val = pulled_carton
-
-                    # Inject directly into localStorage and force a single immediate reload
-                    components.html(
-                        f"""
-                        <script>
-                          localStorage.setItem('chambersos_active_queue', {json.dumps(queue_json)});
-                          localStorage.setItem('chambersos_active_carton', {json.dumps(carton_val)});
-                          window.parent.location.reload();
-                        </script>
-                        """,
-                        height=0,
-                    )
-                    st.toast(f"Successfully pulled {len(pulled_queue)} record(s) from cloud!", icon="📡")
-                    st.rerun()
-                else:
-                    st.warning("Could not reach sync channel or carton_sync.json is empty.")
-
-            if st.button("🚀 Push", use_container_width=True, key="push_cloud_btn"):
-                carton_val = st.session_state.get("cloud_carton_no", "YYLEE-BOX-01")
-                current_queue = st.session_state.get("cloud_synced_queue", [])
-
-                success = repo_sync.push_active_session(
-                    carton_no=carton_val,
-                    department="CONVEYANCING",
-                    queue=current_queue,
-                )
-                if success:
-                    st.toast("Active box queue broadcasted to cloud!", icon="🚀")
-                    st.rerun()
-                else:
-                    st.warning("Cloud push failed.")
-                    
-    # --- INDENTED INSIDE tab_crown SO IT STAYS IN ITS OWN WING ---
+# --- WING 2: CROWN BOX ARCHIVAL TERMINAL (Frontend Direct Sync Bridge) ---
     with open("scanner_ui.html", "r", encoding="utf-8") as f:
         html_content = f.read()
 
-    # Inject secrets securely from Streamlit to the HTML frontend
+    # Inject secrets securely from Streamlit to the HTML frontend template
     gh_token = st.secrets.get("github_token", "")
     gh_repo = st.secrets.get("github_repo", "zulfikrycheong/21C-Automation")
 
-    crown_scanner_component = html_content.replace(
-        'const GH_TOKEN = ".*";', f'const GH_TOKEN = "{gh_token}";'
-    ).replace(
-        'const GH_REPO = ".*";', f'const GH_REPO = "{gh_repo}";'
+    crown_scanner_component = (
+        html_content.replace("__GH_TOKEN__", gh_token)
+                    .replace("__GH_REPO__", gh_repo)
     )
 
     components.html(crown_scanner_component, height=1050, scrolling=True)
