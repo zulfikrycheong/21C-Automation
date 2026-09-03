@@ -802,26 +802,25 @@ with tab_crown:
                     pulled_queue = cloud_data.get("queue", [])
                     pulled_carton = cloud_data.get("carton_no", "YYLEE-BOX-01")
                     
+                    # Force update session state immediately
                     st.session_state["cloud_synced_queue"] = pulled_queue
                     st.session_state["cloud_carton_no"] = pulled_carton
 
-                    # Serialize to JSON strings safely for script injection
                     queue_json = json.dumps(pulled_queue)
                     carton_val = pulled_carton
 
-                    # Inject directly into localStorage AND force a clean state reload
+                    # Inject directly into localStorage and force a single immediate reload
                     components.html(
-    f"""
-    <script>
-      localStorage.setItem('chambersos_active_queue', {json.dumps(queue_json)});
-      localStorage.setItem('chambersos_active_carton', {json.dumps(carton_val)});
-      window.parent.location.reload();
-    </script>
-    """,
-    height=0,
-)
-
-                    st.toast(f"Pulled {len(pulled_queue)} items from cloud and synced terminal!", icon="📡")
+                        f"""
+                        <script>
+                          localStorage.setItem('chambersos_active_queue', {json.dumps(queue_json)});
+                          localStorage.setItem('chambersos_active_carton', {json.dumps(carton_val)});
+                          window.parent.location.reload();
+                        </script>
+                        """,
+                        height=0,
+                    )
+                    st.toast(f"Successfully pulled {len(pulled_queue)} record(s) from cloud!", icon="📡")
                     st.rerun()
                 else:
                     st.warning("Could not reach sync channel or carton_sync.json is empty.")
