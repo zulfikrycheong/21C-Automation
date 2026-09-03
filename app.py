@@ -823,7 +823,15 @@ with tab_crown:
 
             if st.button("🚀 Push", use_container_width=True, key="push_cloud_btn"):
                 carton_val = st.session_state.get("cloud_carton_no", "YYLEE-BOX-01")
+                # Fallback to a live test payload or active session queue if empty
                 current_queue = st.session_state.get("cloud_synced_queue", [])
+                if not current_queue:
+                    current_queue = [{
+                        "line1": "20260999",
+                        "line2": "ACTIVE SYNC TEST",
+                        "line3": "Purchase",
+                        "line4": "Test Address"
+                    }]
 
                 success = repo_sync.push_active_session(
                     carton_no=carton_val,
@@ -831,10 +839,11 @@ with tab_crown:
                     queue=current_queue,
                 )
                 if success:
-                    st.toast("Active box queue broadcasted to cloud!", icon="🚀")
+                    st.toast("Active box queue successfully broadcasted to cloud via Python bridge!", icon="🚀")
+                    st.rerun()
                 else:
-                    st.warning("Cloud push failed. Check network or token limits.")
-
+                    st.warning("Cloud push failed. Check token permissions.")
+                    
     # --- INDENTED INSIDE tab_crown SO IT STAYS IN ITS OWN WING ---
     with open("scanner_ui.html", "r", encoding="utf-8") as f:
         html_content = f.read()
