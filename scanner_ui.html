@@ -748,17 +748,27 @@ async function cloudPush(status = "active") {
   return false;
 }
 
-async function closeCartonAndSync() {
-  if (fileQueue.length === 0) { alert("Queue is empty — nothing to close."); return; }
-  await generateWordDoc(false);           // keep the physical/paper record export
-  const ok = await cloudPush("closed");   // this is what Wing 3 will pick up
-  if (ok) {
-    fileQueue = [];
-    renderQueue(); updateCapacityDisplay();
-    localStorage.removeItem('chambersos_active_queue');
-    alert("Carton closed, exported, and queued for warehouse indexing. 📦");
+let lastKnownCarton = "";
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadCartonState();
+    lastKnownCarton = document.getElementById('cartonNumberInput').value.trim();
+    changeDepartment();
+    updateCapacityDisplay();
+  });
+
+  function cloudPullOnCartonChange() {
+    const newCarton = document.getElementById('cartonNumberInput').value.trim();
+    if (newCarton && newCarton !== lastKnownCarton && fileQueue.length > 0) {
+      if (!confirm(`You have ${fileQueue.length} unsaved file(s) for "${lastKnownCarton}". Switching to "${newCarton}" will discard them from this screen unless already pushed. Continue?`)) {
+        document.getElementById('cartonNumberInput').value = lastKnownCarton;
+        return;
+      }
+      fileQueue = [];
+    }
+    lastKnownCarton = newCarton;
+    cloudPull();
   }
-}
 
 async function cloudPull() {
   const cartonNo = document.getElementById('cartonNumberInput').value.trim() || "YYLEE-BOX-01";
@@ -774,8 +784,8 @@ async function cloudPull() {
   }
 }
 
-// Auto-pull when carton number changes
-document.getElementById('cartonNumberInput').addEventListener('change', cloudPull);
+// Auto-pull when carton number changes safely with bleed guard
+document.getElementById('cartonNumberInput').addEventListener('change', cloudPullOnCartonChange);
   
 </script>
 </body>
