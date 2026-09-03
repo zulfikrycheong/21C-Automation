@@ -725,10 +725,8 @@ async function ghPutFile(path, dataObj, sha) {
 function mergeQueues(remoteQueue, localQueue) {
   const byKey = new Map();
   
-  // Load remote items into the map first
   (remoteQueue || []).forEach(item => byKey.set(item.line1, item));
   
-  // Merge local items with per-record timestamp tie-breaking
   (localQueue || []).forEach(localItem => {
     if (!byKey.has(localItem.line1)) {
       byKey.set(localItem.line1, localItem);
@@ -737,7 +735,6 @@ function mergeQueues(remoteQueue, localQueue) {
       const localTime = new Date(localItem.last_edited || 0).getTime();
       const remoteTime = new Date(remoteItem.last_edited || 0).getTime();
       
-      // Whichever timestamp is newer wins the conflict
       if (localTime >= remoteTime) {
         byKey.set(localItem.line1, localItem);
       }
@@ -773,27 +770,39 @@ async function cloudPush(status = "active") {
   return false;
 }
 
+async function closeCartonAndSync() {
+  if (fileQueue.length === 0) { alert("Queue is empty — nothing to close."); return; }
+  await generateWordDoc(false);           
+  const ok = await cloudPush("closed");   
+  if (ok) {
+    fileQueue = [];
+    renderQueue(); updateCapacityDisplay();
+    localStorage.removeItem('chambersos_active_queue');
+    alert("Carton closed, exported, and queued for warehouse indexing. 📦");
+  }
+}
+
 let lastKnownCarton = "";
 
-  window.addEventListener('DOMContentLoaded', () => {
-    loadCartonState();
-    lastKnownCarton = document.getElementById('cartonNumberInput').value.trim();
-    changeDepartment();
-    updateCapacityDisplay();
-  });
+window.addEventListener('DOMContentLoaded', () => {
+  loadCartonState();
+  lastKnownCarton = document.getElementById('cartonNumberInput').value.trim();
+  changeDepartment();
+  updateCapacityDisplay();
+});
 
-  function cloudPullOnCartonChange() {
-    const newCarton = document.getElementById('cartonNumberInput').value.trim();
-    if (newCarton && newCarton !== lastKnownCarton && fileQueue.length > 0) {
-      if (!confirm(`You have ${fileQueue.length} unsaved file(s) for "${lastKnownCarton}". Switching to "${newCarton}" will discard them from this screen unless already pushed. Continue?`)) {
-        document.getElementById('cartonNumberInput').value = lastKnownCarton;
-        return;
-      }
-      fileQueue = [];
+function cloudPullOnCartonChange() {
+  const newCarton = document.getElementById('cartonNumberInput').value.trim();
+  if (newCarton && newCarton !== lastKnownCarton && fileQueue.length > 0) {
+    if (!confirm(`You have ${fileQueue.length} unsaved file(s) for "${lastKnownCarton}". Switching to "${newCarton}" will discard them from this screen unless already pushed. Continue?`)) {
+      document.getElementById('cartonNumberInput').value = lastKnownCarton;
+      return;
     }
-    lastKnownCarton = newCarton;
-    cloudPull();
+    fileQueue = [];
   }
+  lastKnownCarton = newCarton;
+  cloudPull();
+}
 
 async function cloudPull() {
   const cartonNo = document.getElementById('cartonNumberInput').value.trim() || "YYLEE-BOX-01";
@@ -809,7 +818,6 @@ async function cloudPull() {
   }
 }
 
-// Auto-pull when carton number changes safely with bleed guard
 document.getElementById('cartonNumberInput').addEventListener('change', cloudPullOnCartonChange);
   
 </script>
