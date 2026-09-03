@@ -547,7 +547,14 @@
 
     if (!l1 || !l2 || !l3) { alert("Please ensure File Number, Client Name, and Matter Type are populated."); return; }
 
-    const record = { line1: l1, line2: l2, line3: l3, line4: l4 };
+    const record = { 
+      line1: l1, 
+      line2: l2, 
+      line3: l3, 
+      line4: l4, 
+      last_edited: new Date().toISOString() 
+    };
+    
     if (currentEditingIndex >= 0) fileQueue[currentEditingIndex] = record;
     else fileQueue.push(record);
 
@@ -717,8 +724,26 @@ async function ghPutFile(path, dataObj, sha) {
 
 function mergeQueues(remoteQueue, localQueue) {
   const byKey = new Map();
+  
+  // Load remote items into the map first
   (remoteQueue || []).forEach(item => byKey.set(item.line1, item));
-  (localQueue || []).forEach(item => byKey.set(item.line1, item)); // local wins
+  
+  // Merge local items with per-record timestamp tie-breaking
+  (localQueue || []).forEach(localItem => {
+    if (!byKey.has(localItem.line1)) {
+      byKey.set(localItem.line1, localItem);
+    } else {
+      const remoteItem = byKey.get(localItem.line1);
+      const localTime = new Date(localItem.last_edited || 0).getTime();
+      const remoteTime = new Date(remoteItem.last_edited || 0).getTime();
+      
+      // Whichever timestamp is newer wins the conflict
+      if (localTime >= remoteTime) {
+        byKey.set(localItem.line1, localItem);
+      }
+    }
+  });
+  
   return Array.from(byKey.values());
 }
 
