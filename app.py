@@ -504,22 +504,39 @@ def render_pdf_preview(pdf_bytes):
         image = page.render(scale=2).to_pil()
         st.image(image, caption=f"Page {i + 1}", use_container_width=True)
 
-
 def sync_closed_cartons_from_cloud(db_path):
     """Pulls all closed carton_sync/*.json files from the repo and
-    ingests any not already recorded in ingested_cartons."""
+    ingests any new or updated matters into the archive."""
     paths = repo_sync.list_carton_sync_files()
     conn = sqlite3.connect(db_path, timeout=10)
     cur = conn.cursor()
-    already = {row[0] for row in cur.execute("SELECT carton_no FROM ingested_cartons")}
+    
+    # Load already ingested cartons and their last_updated stamps
+    already = {}
+    try:
+        for row in cur.execute("SELECT carton_no, last_updated FROM ingested_cartons"):
+            already[row[0]] = row[1] or ""
+    except sqlite3.OperationalError:
+        # Fallback if table structure is old
+        cur.execute("""CREATE TABLE IF NOT EXISTS ingested_cartons (
+            carton_no TEXT PRIMARY KEY,
+            ingested_at TEXT,
+            last_updated TEXT
+        )""")
+
     results = []
     for path in paths:
         data = repo_sync.fetch_carton_file(path)
         if not data or data.get("status") != "closed":
             continue
+        
         c_no = data.get("carton_no", "UNKNOWN")
-        if c_no in already:
+        cloud_updated = data.get("last_updated", "")
+        
+        # Skip only if it's already ingested AND the timestamp hasn't changed
+        if c_no in already and already[c_no] == cloud_updated:
             continue
+            
         inserted = 0
         for item in data.get("queue", []):
             try:
@@ -533,13 +550,15 @@ def sync_closed_cartons_from_cloud(db_path):
                 inserted += 1
             except sqlite3.IntegrityError:
                 pass
+                
         cur.execute(
-            "INSERT OR REPLACE INTO ingested_cartons (carton_no, ingested_at) VALUES (?, ?)",
-            (c_no, datetime.now().isoformat()),
+            "INSERT OR REPLACE INTO ingested_cartons (carton_no, ingested_at, last_updated) VALUES (?, ?, ?)",
+            (c_no, datetime.now().isoformat(), cloud_updated),
         )
         conn.commit()
-        if inserted:
+        if inserted or c_no not in already:
             results.append((c_no, inserted))
+            
     conn.close()
     return results
 
@@ -856,7 +875,8 @@ with tab_locator:
         conn = sqlite3.connect(db_path, timeout=10)
         conn.execute("""CREATE TABLE IF NOT EXISTS ingested_cartons (
             carton_no TEXT PRIMARY KEY,
-            ingested_at TEXT
+            ingested_at TEXT,
+            last_updated TEXT
         )""")
 
         # Remove pre-existing duplicate (carton_no, file_no) rows, keeping the earliest one
