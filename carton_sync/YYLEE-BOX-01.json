@@ -1,6 +1,6 @@
 {
   "carton_no": "YYLEE-BOX-01",
-  "department": "FAMILY",
+  "department": "CONVEYANCING",
   "queue": [
     {
       "line1": "20260363",
@@ -8,8 +8,22 @@
       "line3": "UD",
       "line4": "FC/OAD 1019/2026",
       "last_edited": "2026-09-03T06:36:44.400Z"
+    },
+    {
+      "line1": "20260709",
+      "line2": "Loong Yu Ling Diann De Bavis (Applicant)",
+      "line3": "Grant of Probate (GOP)",
+      "line4": "FC/P 6785/2026",
+      "last_edited": "2026-09-03T06:38:12.824Z"
+    },
+    {
+      "line1": "20260149",
+      "line2": "DAMIEN CHAN HAORAN",
+      "line3": "Purchase",
+      "line4": "251 Pasir Panjang Road #05-06, The Orient, Singapore 118610",
+      "last_edited": "2026-09-03T06:39:01.194Z"
     }
   ],
   "status": "active",
-  "last_updated": "2026-09-03T06:37:17.560Z"
+  "last_updated": "2026-09-03T06:39:06.001Z"
 }
