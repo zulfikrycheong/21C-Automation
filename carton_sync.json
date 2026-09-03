@@ -1,13 +1,6 @@
 {
   "carton_no": "YYLEE-BOX-01",
   "department": "CONVEYANCING",
-  "queue": [
-    {
-      "line1": "20260999",
-      "line2": "ACTIVE SYNC TEST",
-      "line3": "Purchase",
-      "line4": "Test Address"
-    }
-  ],
-  "last_updated": "2026-09-03T03:43:34.744374"
+  "queue": [],
+  "last_updated": "2026-09-03T03:47:56.990692"
 }
