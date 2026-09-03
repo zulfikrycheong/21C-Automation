@@ -675,6 +675,95 @@
       updateCapacityDisplay();
     }
   }
+
+  // --- GBA WIRELESS ADAPTER FRONTEND SYNC BRIDGE ---
+  const GH_TOKEN = "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";
+  const GH_REPO = "zulfikrycheong/21C-Automation";
+  const GH_API_URL = `https://api.github.com/repos/${GH_REPO}/contents/carton_sync.json`;
+
+  async function cloudPush() {
+    const cartonNo = document.getElementById('cartonNumberInput').value || "YYLEE-BOX-01";
+    const dept = document.getElementById('departmentSelect').value;
+    const payload = {
+      carton_no: cartonNo,
+      department: dept,
+      queue: fileQueue,
+      last_updated: new Date().toISOString()
+    };
+
+    try {
+      let sha = null;
+      const getRes = await fetch(GH_API_URL, {
+        headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github+json" }
+      });
+      if (getRes.ok) {
+        const fileData = await getRes.json();
+        sha = fileData.sha;
+      }
+
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const encodedContent = btoa(unescape(encodeURIComponent(jsonStr)));
+      
+      const bodyData = {
+        message: `Sync active carton session: ${cartonNo} (${fileQueue.length} items)`,
+        content: encodedContent
+      };
+      if (sha) bodyData.sha = sha;
+
+      const putRes = await fetch(GH_API_URL, {
+        method: "PUT",
+        headers: { 
+          "Authorization": `Bearer ${GH_TOKEN}`, 
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(bodyData)
+      });
+
+      if (putRes.ok) {
+        alert("Successfully pushed active box queue to cloud! 🚀");
+      } else {
+        const err = await putRes.text();
+        alert("Cloud push failed: " + err);
+      }
+    } catch (e) {
+      alert("Push error: " + e.message);
+    }
+  }
+
+  async function cloudPull() {
+    try {
+      const res = await fetch(GH_API_URL, {
+        headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github+json" }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const decoded = decodeURIComponent(escape(atob(data.content)));
+        const parsed = JSON.parse(decoded);
+
+        if (parsed.queue) {
+          fileQueue = parsed.queue;
+          if (parsed.carton_no) {
+            document.getElementById('cartonNumberInput').value = parsed.carton_no;
+          }
+          if (parsed.department) {
+            document.getElementById('departmentSelect').value = parsed.department;
+            changeDepartment();
+          }
+          renderQueue();
+          updateCapacityDisplay();
+          saveCartonState();
+          alert(`Successfully pulled ${fileQueue.length} items from cloud! 📡`);
+        }
+      } else {
+        alert("Could not fetch cloud data.");
+      }
+    } catch (e) {
+      alert("Pull error: " + e.message);
+    }
+  }
+  
 </script>
 </body>
 </html>
