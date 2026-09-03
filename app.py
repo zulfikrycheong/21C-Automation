@@ -810,6 +810,9 @@ with tab_crown:
       if st.button(
           "🚀 Push", use_container_width=True, key="push_cloud_btn"
       ):
+        # We trigger a sync push. Since queue lives in browser localStorage, 
+        # let's pass a placeholder or pull the component state.
+        st.info("To push from mobile, use the export or sync function in the scanner view.")
         success = repo_sync.push_active_session(
             carton_no="YYLEE-TEST",
             department="CONVEYANCING",
