@@ -843,10 +843,8 @@ with tab_intake:
             stamp_submitted = st.form_submit_button("🏷️ Locate & Stamp Closed Date", use_container_width=True)
 
         if stamp_submitted and closure_query.strip():
-            with st.spinner("Stacking threads and blasting through sheets..."):
+            with st.spinner("Searching monthly sheets..."):
                 try:
-                    from concurrent.futures import ThreadPoolExecutor, as_completed
-
                     scopes = [
                         "https://www.googleapis.com/auth/spreadsheets",
                         "https://www.googleapis.com/auth/drive",
@@ -863,14 +861,15 @@ with tab_intake:
                     workbook = client.open(GOOGLE_SHEET_NAME)
                     
                     q_clean = closure_query.strip().lower()
+                    found_match = False
                     
-                    # Filter target worksheets first (skip template/summary)
+                    # Get all sheets, skipping template/summary
                     target_sheets = [
                         ws for ws in workbook.worksheets() 
                         if ws.title.lower() not in ["template", "summary"]
                     ]
 
-                    def scan_worksheet(ws):
+                    for ws in target_sheets:
                         try:
                             headers = ws.row_values(1)
                             closed_col_idx = None
@@ -880,32 +879,23 @@ with tab_intake:
                                     break
                             
                             if not closed_col_idx:
-                                return None
+                                continue
                             
                             all_vals = ws.get_all_values()
                             if len(all_vals) <= 1:
-                                return None
+                                continue
                                 
                             for r_idx, row_vals in enumerate(all_vals[1:], start=2):
                                 row_text = " ".join(str(v).lower() for v in row_vals)
                                 if q_clean in row_text:
                                     ws.update_cell(r_idx, closed_col_idx, closure_date_input)
-                                    return ws.title, r_idx
-                        except Exception:
-                            pass
-                        return None
-
-                    found_match = False
-                    # Stack 10 threads to scan sheets simultaneously
-                    with ThreadPoolExecutor(max_workers=10) as executor:
-                        futures = {executor.submit(scan_worksheet, ws): ws for ws in target_sheets}
-                        for future in as_completed(futures):
-                            res = future.result()
-                            if res:
-                                ws_title, r_idx = res
-                                found_match = True
-                                st.success(f"Successfully stamped **{closure_date_input}** on tab **{ws_title}** (Row {r_idx}) for match: `{closure_query}`")
+                                    found_match = True
+                                    st.success(f"Successfully stamped **{closure_date_input}** on tab **{ws.title}** (Row {r_idx}) for match: `{closure_query}`")
+                                    break
+                            if found_match:
                                 break
+                        except Exception:
+                            continue
                     
                     if not found_match:
                         st.warning(f"Could not find any matching record for '{closure_query}' across the monthly worksheets.")
