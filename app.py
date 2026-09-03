@@ -835,7 +835,7 @@ with tab_intake:
 # --- QUICK FILE CLOSURE & ARCHIVE STAMP EXTENSION ---
     st.markdown("---")
     with st.expander("⚡ Quick File Closure & Archive Stamp", expanded=False):
-        st.caption("Search across all monthly tabs for a File Number or Client Name and auto-stamp today's date into the Closed Date column.")
+        st.caption("Search recent and 4-month target sheets first, with automatic historical fallback.")
         
         with st.form("quick_closure_form"):
             closure_query = st.text_input("File Number or Client Name Search", placeholder="e.g. 20260235 or JOHN DOE")
@@ -843,8 +843,10 @@ with tab_intake:
             stamp_submitted = st.form_submit_button("🏷️ Locate & Stamp Closed Date", use_container_width=True)
 
         if stamp_submitted and closure_query.strip():
-            with st.spinner("Searching monthly sheets..."):
+            with st.spinner("Targeting 4-month window and recent sheets..."):
                 try:
+                    from dateutil.relativedelta import relativedelta
+                    
                     scopes = [
                         "https://www.googleapis.com/auth/spreadsheets",
                         "https://www.googleapis.com/auth/drive",
@@ -863,42 +865,58 @@ with tab_intake:
                     q_clean = closure_query.strip().lower()
                     found_match = False
                     
-                    # Get all sheets, skipping template/summary
-                    target_sheets = [
-                        ws for ws in workbook.worksheets() 
-                        if ws.title.lower() not in ["template", "summary"]
-                    ]
+                    all_sheets = workbook.worksheets()
+                    sheet_dict = {ws.title.lower(): ws for ws in all_sheets if ws.title.lower() not in ["template", "summary"]}
+                    
+                    # Calculate target 4-months-ago tab name & current month tab name (e.g., "May 2026", "September 2026")
+                    now = datetime.now()
+                    target_4m = (now - relativedelta(months=4)).strftime("%B %Y").lower()
+                    current_m = now.strftime("%B %Y").lower()
+                    
+                    # Priority list: 4 months ago first, then current month, then everything else as fallback
+                    priority_sheets = []
+                    if target_4m in sheet_dict:
+                        priority_sheets.append(sheet_dict[target_4m])
+                    if current_m in sheet_dict and sheet_dict[current_m] not in priority_sheets:
+                        priority_sheets.append(sheet_dict[current_m])
+                        
+                    # Fallback list: all other valid monthly sheets
+                    fallback_sheets = [ws for ws in all_sheets if ws not in priority_sheets and ws.title.lower() not in ["template", "summary"]]
+                    
+                    ordered_sheets = priority_sheets + fallback_sheets
 
-                    for ws in target_sheets:
+                    def search_sheet(ws):
+                        headers = ws.row_values(1)
+                        closed_col_idx = None
+                        for idx, h_name in enumerate(headers):
+                            if "closed date" in h_name.lower():
+                                closed_col_idx = idx + 1
+                                break
+                        if not closed_col_idx:
+                            return False
+                        
+                        all_vals = ws.get_all_values()
+                        if len(all_vals) <= 1:
+                            return False
+                            
+                        for r_idx, row_vals in enumerate(all_vals[1:], start=2):
+                            row_text = " ".join(str(v).lower() for v in row_vals)
+                            if q_clean in row_text:
+                                ws.update_cell(r_idx, closed_col_idx, closure_date_input)
+                                st.success(f"Successfully stamped **{closure_date_input}** on tab **{ws.title}** (Row {r_idx}) for match: `{closure_query}`")
+                                return True
+                        return False
+
+                    for ws in ordered_sheets:
                         try:
-                            headers = ws.row_values(1)
-                            closed_col_idx = None
-                            for idx, h_name in enumerate(headers):
-                                if "closed date" in h_name.lower():
-                                    closed_col_idx = idx + 1
-                                    break
-                            
-                            if not closed_col_idx:
-                                continue
-                            
-                            all_vals = ws.get_all_values()
-                            if len(all_vals) <= 1:
-                                continue
-                                
-                            for r_idx, row_vals in enumerate(all_vals[1:], start=2):
-                                row_text = " ".join(str(v).lower() for v in row_vals)
-                                if q_clean in row_text:
-                                    ws.update_cell(r_idx, closed_col_idx, closure_date_input)
-                                    found_match = True
-                                    st.success(f"Successfully stamped **{closure_date_input}** on tab **{ws.title}** (Row {r_idx}) for match: `{closure_query}`")
-                                    break
-                            if found_match:
+                            if search_sheet(ws):
+                                found_match = True
                                 break
                         except Exception:
                             continue
                     
                     if not found_match:
-                        st.warning(f"Could not find any matching record for '{closure_query}' across the monthly worksheets.")
+                        st.warning(f"Could not find any matching record for '{closure_query}' across the worksheets.")
                 except Exception as e:
                     st.error(f"Error during closure stamping: {e}")
                     
