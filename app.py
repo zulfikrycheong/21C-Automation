@@ -809,11 +809,16 @@ with tab_crown:
   
   st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
           
-crown_scanner_component = """
-<!DOCTYPE html>
-<html lang="en">
-...
-"""
+import textwrap
+
+crown_scanner_component = textwrap.dedent("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    ...
+    </head>
+    </html>
+""")
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
