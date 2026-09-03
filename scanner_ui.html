@@ -722,7 +722,7 @@ function mergeQueues(remoteQueue, localQueue) {
   return Array.from(byKey.values());
 }
 
-async function cloudPush() {
+async function cloudPush(status = "active") {
   const cartonNo = document.getElementById('cartonNumberInput').value.trim() || "YYLEE-BOX-01";
   const dept = document.getElementById('departmentSelect').value;
   const path = syncPath(cartonNo);
@@ -731,21 +731,33 @@ async function cloudPush() {
     try {
       const { data: remote, sha } = await ghGetFile(path);
       const merged = mergeQueues(remote ? remote.queue : [], fileQueue);
-      const payload = { carton_no: cartonNo, department: dept, queue: merged, last_updated: new Date().toISOString() };
+      const payload = { carton_no: cartonNo, department: dept, queue: merged, status, last_updated: new Date().toISOString() };
       const res = await ghPutFile(path, payload, sha);
 
-      if (res.status === 409) continue; 
-      if (!res.ok) { alert("Cloud push failed: " + await res.text()); return; }
+      if (res.status === 409) continue;
+      if (!res.ok) { alert("Cloud push failed: " + await res.text()); return false; }
 
       fileQueue = merged;
       renderQueue(); updateCapacityDisplay(); saveCartonState();
-      alert(`Synced — ${merged.length} total files in ${cartonNo} (merged with cloud). 🚀`);
-      return;
+      return true;
     } catch (e) {
-      alert("Push error: " + e.message); return;
+      alert("Push error: " + e.message); return false;
     }
   }
-  alert("Push failed after retries — someone else is syncing this carton right now. Try again in a moment.");
+  alert("Push failed after retries — try again in a moment.");
+  return false;
+}
+
+async function closeCartonAndSync() {
+  if (fileQueue.length === 0) { alert("Queue is empty — nothing to close."); return; }
+  await generateWordDoc(false);           // keep the physical/paper record export
+  const ok = await cloudPush("closed");   // this is what Wing 3 will pick up
+  if (ok) {
+    fileQueue = [];
+    renderQueue(); updateCapacityDisplay();
+    localStorage.removeItem('chambersos_active_queue');
+    alert("Carton closed, exported, and queued for warehouse indexing. 📦");
+  }
 }
 
 async function cloudPull() {
