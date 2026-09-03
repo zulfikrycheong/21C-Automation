@@ -807,7 +807,7 @@ with tab_crown:
 
                     # Serialize to JSON strings safely for script injection
                     queue_json = json.dumps(pulled_queue)
-                    carton_val = json.dumps(pulled_carton)
+                    carton_val = pulled_carton
 
                     # Inject directly into localStorage AND force a clean state reload
                     components.html(
