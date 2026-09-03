@@ -779,7 +779,11 @@ with tab_intake:
             )
 
 # ==============================================================================
-# --- WING 2: CROWN BOX ARCHIVAL TERMINAL (Frontend Direct Sync Bridge) ---
+# WING 2: CROWN BOX ARCHIVAL TERMINAL (Frontend Direct Sync Bridge)
+# ==============================================================================
+with tab_crown:
+    st.markdown("### 📦 Crown Box Archival Terminal (Cloud Synced)")
+    
     with open("scanner_ui.html", "r", encoding="utf-8") as f:
         html_content = f.read()
 
