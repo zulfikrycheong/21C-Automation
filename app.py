@@ -807,21 +807,21 @@ with tab_crown:
         else:
           st.warning("Could not reach sync channel.")
 
-      if st.button(
-          "🚀 Push", use_container_width=True, key="push_cloud_btn"
-      ):
-        # We trigger a sync push. Since queue lives in browser localStorage, 
-        # let's pass a placeholder or pull the component state.
-        st.info("To push from mobile, use the export or sync function in the scanner view.")
+      if st.button("🚀 Test Push Sample Data", use_container_width=True):
+        test_queue = [{
+            "line1": "20260999",
+            "line2": "TEST CLIENT",
+            "line3": "Purchase",
+            "line4": "Test Address",
+        }]
         success = repo_sync.push_active_session(
-            carton_no="YYLEE-TEST",
+            carton_no="YYLEE-TEST-BOX",
             department="CONVEYANCING",
-            queue=st.session_state.get("cloud_synced_queue", []),
+            queue=test_queue,
         )
         if success:
-          st.toast("Queue broadcasted to cloud!", icon="🚀")
-        else:
-          st.warning("Cloud push failed.")
+          st.toast("Test data pushed to GitHub!", icon="🚀")
+          st.rerun()
             
   st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
 
