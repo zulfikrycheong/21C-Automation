@@ -133,13 +133,12 @@
   <canvas id="snapshotCanvas" style="display:none"></canvas>
 </div>
 
-<div class="card">
-  <div class="queue-header">
+<div class="queue-header">
     <div class="queue-count" id="queueCount">0 Files in Active Box</div>
-    <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="generateWordDoc()">Export .docx Record</button>
-    <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="closeCartonAndSync()">✅ Close Carton & Sync to Archive</button>
-  </div>
-  <div id="fileQueueContainer"></div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="generateWordDoc()">Export .docx</button>
+        <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="closeCartonAndSync()">✅ Close Carton</button>
+    </div>
 </div>
 
 <!-- Edit Modal -->
