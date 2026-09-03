@@ -796,7 +796,7 @@ with tab_crown:
       )
     with col_sync2:
       if st.button(
-          "🔄 Pull Queue", use_container_width=True, key="pull_cloud_btn"
+          "🔄 Pull", use_container_width=True, key="pull_cloud_btn"
       ):
         cloud_data, _ = repo_sync.pull_active_session()
         if cloud_data:
@@ -807,6 +807,19 @@ with tab_crown:
         else:
           st.warning("Could not reach sync channel.")
 
+      if st.button(
+          "🚀 Push", use_container_width=True, key="push_cloud_btn"
+      ):
+        success = repo_sync.push_active_session(
+            carton_no="YYLEE-TEST",
+            department="CONVEYANCING",
+            queue=st.session_state.get("cloud_synced_queue", []),
+        )
+        if success:
+          st.toast("Queue broadcasted to cloud!", icon="🚀")
+        else:
+          st.warning("Cloud push failed.")
+            
   st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
 
   # --- INDENTED INSIDE tab_crown SO IT STAYS IN ITS OWN WING ---
