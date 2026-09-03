@@ -784,7 +784,7 @@ with tab_intake:
 with tab_crown:
   st.markdown("### 📦 Crown Box Archival Terminal (Cloud Synced)")
 
- # --- GBA WIRELESS ADAPTER SYNC WIDGET ---
+  # --- GBA WIRELESS ADAPTER SYNC WIDGET ---
   with st.expander("📡 Cloud Sync & Multi-Terminal Status", expanded=False):
     col_sync1, col_sync2 = st.columns([3, 1])
     with col_sync1:
@@ -806,14 +806,14 @@ with tab_crown:
           st.rerun()
         else:
           st.warning("Could not reach sync channel.")
-  
+
   st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
 
-# Load the Crown Scanner frontend cleanly without indentation errors
-with open("scanner_ui.html", "r", encoding="utf-8") as f:
-  crown_scanner_component = f.read()
+  # --- INDENTED INSIDE tab_crown SO IT STAYS IN ITS OWN WING ---
+  with open("scanner_ui.html", "r", encoding="utf-8") as f:
+    crown_scanner_component = f.read()
 
-components.html(crown_scanner_component, height=1050, scrolling=True)
+  components.html(crown_scanner_component, height=1050, scrolling=True)
     
 # ==============================================================================
 # WING 3: CROWN ARCHIVAL LOCATOR & SEARCH ENGINE
