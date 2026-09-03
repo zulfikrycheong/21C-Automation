@@ -832,10 +832,10 @@ with tab_intake:
                 type="primary",
             )
 
-# --- QUICK FILE CLOSURE & ARCHIVE STAMP EXTENSION ---
+# --- QUICK FILE CLOSURE & ARCHIVE STAMP EXTENSION (LEGACY EDITION) ---
     st.markdown("---")
-    with st.expander("⚡ Quick File Closure & Archive Stamp", expanded=False):
-        st.caption("Search recent and 4-month target sheets first, with automatic historical fallback.")
+    with st.expander("⚡ Quick File Closure & Archive Stamp (Legacy Edition)", expanded=False):
+        st.caption("Precision 4-month window search with strict template adherence and automatic header patching.")
         
         with st.form("quick_closure_form"):
             closure_query = st.text_input("File Number or Client Name Search", placeholder="e.g. 20260235 or JOHN DOE")
@@ -843,10 +843,10 @@ with tab_intake:
             stamp_submitted = st.form_submit_button("🏷️ Locate & Stamp Closed Date", use_container_width=True)
 
         if stamp_submitted and closure_query.strip():
-            with st.spinner("Targeting 4-month window and recent sheets..."):
+            with st.spinner("Executing legacy-grade search and template check..."):
                 try:
                     from dateutil.relativedelta import relativedelta
-                    
+
                     scopes = [
                         "https://www.googleapis.com/auth/spreadsheets",
                         "https://www.googleapis.com/auth/drive",
@@ -865,43 +865,52 @@ with tab_intake:
                     q_clean = closure_query.strip().lower()
                     found_match = False
                     
+                    # Fetch template headers as the source of truth
+                    template_ws = workbook.worksheet("Template")
+                    template_headers = template_ws.row_values(1)
+                    
                     all_sheets = workbook.worksheets()
                     sheet_dict = {ws.title.lower(): ws for ws in all_sheets if ws.title.lower() not in ["template", "summary"]}
                     
-                    # Calculate target 4-months-ago tab name & current month tab name (e.g., "May 2026", "September 2026")
+                    # Calculate 4-month sweet spot and current month
                     now = datetime.now()
                     target_4m = (now - relativedelta(months=4)).strftime("%B %Y").lower()
                     current_m = now.strftime("%B %Y").lower()
                     
-                    # Priority list: 4 months ago first, then current month, then everything else as fallback
                     priority_sheets = []
                     if target_4m in sheet_dict:
                         priority_sheets.append(sheet_dict[target_4m])
                     if current_m in sheet_dict and sheet_dict[current_m] not in priority_sheets:
                         priority_sheets.append(sheet_dict[current_m])
                         
-                    # Fallback list: all other valid monthly sheets
                     fallback_sheets = [ws for ws in all_sheets if ws not in priority_sheets and ws.title.lower() not in ["template", "summary"]]
-                    
                     ordered_sheets = priority_sheets + fallback_sheets
 
-                    def search_sheet(ws):
+                    def process_sheet(ws):
                         headers = ws.row_values(1)
+                        
+                        # Self-healing check: If 'Closed Date' header is missing, patch it from Template
                         closed_col_idx = None
                         for idx, h_name in enumerate(headers):
                             if "closed date" in h_name.lower():
                                 closed_col_idx = idx + 1
                                 break
+                        
                         if not closed_col_idx:
-                            return False
+                            # Fallback to template layout length or append header
+                            closed_col_idx = len(headers) + 1
+                            ws.update_cell(1, closed_col_idx, "Closed Date")
                         
                         all_vals = ws.get_all_values()
                         if len(all_vals) <= 1:
                             return False
                             
+                        # Precise search: Check File Number (Col C -> index 2) and Client Name (Col E -> index 4)
                         for r_idx, row_vals in enumerate(all_vals[1:], start=2):
-                            row_text = " ".join(str(v).lower() for v in row_vals)
-                            if q_clean in row_text:
+                            file_no_val = str(row_vals[2]).lower() if len(row_vals) > 2 else ""
+                            client_val = str(row_vals[4]).lower() if len(row_vals) > 4 else ""
+                            
+                            if q_clean in file_no_val or q_clean in client_val:
                                 ws.update_cell(r_idx, closed_col_idx, closure_date_input)
                                 st.success(f"Successfully stamped **{closure_date_input}** on tab **{ws.title}** (Row {r_idx}) for match: `{closure_query}`")
                                 return True
@@ -909,7 +918,7 @@ with tab_intake:
 
                     for ws in ordered_sheets:
                         try:
-                            if search_sheet(ws):
+                            if process_sheet(ws):
                                 found_match = True
                                 break
                         except Exception:
@@ -918,7 +927,7 @@ with tab_intake:
                     if not found_match:
                         st.warning(f"Could not find any matching record for '{closure_query}' across the worksheets.")
                 except Exception as e:
-                    st.error(f"Error during closure stamping: {e}")
+                    st.error(f"Error during legacy closure stamping: {e}")
                     
 # ==============================================================================
 # WING 2: CROWN BOX ARCHIVAL TERMINAL (Frontend Direct Sync Bridge)
