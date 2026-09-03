@@ -842,10 +842,20 @@ with tab_crown:
           st.warning("Cloud push failed. Check network or token limits.")
 
   # --- INDENTED INSIDE tab_crown SO IT STAYS IN ITS OWN WING ---
-  with open("scanner_ui.html", "r", encoding="utf-8") as f:
-    crown_scanner_component = f.read()
+with open("scanner_ui.html", "r", encoding="utf-8") as f:
+  html_content = f.read()
 
-  components.html(crown_scanner_component, height=1050, scrolling=True)
+# Inject secrets securely from Streamlit to the HTML frontend
+gh_token = st.secrets.get("github_token", "")
+gh_repo = st.secrets.get("github_repo", "zulfikrycheong/21C-Automation")
+
+crown_scanner_component = html_content.replace(
+    'const GH_TOKEN = ".*";', f'const GH_TOKEN = "{gh_token}";'
+).replace(
+    'const GH_REPO = ".*";', f'const GH_REPO = "{gh_repo}";'
+)
+
+components.html(crown_scanner_component, height=1050, scrolling=True)
     
 # ==============================================================================
 # WING 3: CROWN ARCHIVAL LOCATOR & SEARCH ENGINE
