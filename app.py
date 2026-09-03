@@ -782,6 +782,26 @@ with tab_intake:
 # WING 2: CROWN BOX ARCHIVAL TERMINAL (WITH LOCALSTORAGE QUEUE PERSISTENCE)
 # ==============================================================================
 with tab_crown:
+  st.markdown("### 📦 Crown Box Archival Terminal (Cloud Synced)")
+
+  # --- GBA WIRELESS ADAPTER SYNC CHECK ---
+  col_sync1, col_sync2 = st.columns([3, 1])
+  with col_sync1:
+    st.caption(
+        "📡 Multi-device sync active via repository radio channel."
+        " Changes sync across mobile & desktop."
+    )
+  with col_sync2:
+    if st.button("🔄 Pull Live Cloud Queue", use_container_width=True):
+      cloud_data, _ = repo_sync.pull_active_session()
+      if cloud_data:
+        st.session_state["cloud_synced_queue"] = cloud_data.get("queue", [])
+        st.session_state["cloud_carton_no"] = cloud_data.get("carton_no", "")
+        st.toast("Synced latest queue from cloud!", icon="📡")
+        st.rerun()
+      else:
+        st.warning("Could not reach sync channel.")
+          
     crown_scanner_component = """
     <!DOCTYPE html>
     <html lang="en">
