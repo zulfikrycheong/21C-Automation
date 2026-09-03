@@ -1,13 +1,13 @@
 {
   "carton_no": "YYLEE-BOX-01",
-  "department": "CONVEYANCING",
+  "department": "FAMILY",
   "queue": [
     {
       "line1": "20260363",
       "line2": "WONG CHYIE KEN (Applicant)",
-      "line3": "UD",
-      "line4": "FC/OAD 1019/2026",
-      "last_edited": "2026-09-03T06:36:44.400Z"
+      "line3": "CD",
+      "line4": "-",
+      "last_edited": "2026-09-03T06:40:59.157Z"
     },
     {
       "line1": "20260709",
@@ -25,5 +25,5 @@
     }
   ],
   "status": "active",
-  "last_updated": "2026-09-03T06:39:06.001Z"
+  "last_updated": "2026-09-03T06:41:07.348Z"
 }
