@@ -223,179 +223,177 @@ def get_next_matter_number(sheet):
 def generate_perfect_pdf(
     matter_no, clients_text, contacts_text, matter_type, date_opened
 ):
-  buffer = io.BytesIO()
-  doc = SimpleDocTemplate(
-      buffer,
-      pagesize=A4,
-      leftMargin=21.24,
-      rightMargin=21.24,
-      topMargin=36.0,
-      bottomMargin=36.0,
-  )
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=21.24,
+        rightMargin=21.24,
+        topMargin=36.0,
+        bottomMargin=36.0,
+    )
 
-  style_normal_20 = ParagraphStyle(
-      "Norm20",
-      fontName="Times-Roman",
-      fontSize=20,
-      leading=26,
-      alignment=TA_LEFT,
-  )
-  style_bold_20 = ParagraphStyle(
-      "Bold20",
-      fontName="Times-Bold",
-      fontSize=20,
-      leading=26,
-      alignment=TA_LEFT,
-  )
-  style_firm_title = ParagraphStyle(
-      "FirmTitle",
-      fontName="Times-Bold",
-      fontSize=20,
-      leading=26,
-      alignment=TA_CENTER,
-  )
-  style_firm_body = ParagraphStyle(
-      "FirmBody",
-      fontName="Times-Roman",
-      fontSize=20,
-      leading=26,
-      alignment=TA_CENTER,
-  )
+    style_normal_20 = ParagraphStyle(
+        "Norm20",
+        fontName="Times-Roman",
+        fontSize=20,
+        leading=26,
+        alignment=TA_LEFT,
+    )
+    style_bold_20 = ParagraphStyle(
+        "Bold20",
+        fontName="Times-Bold",
+        fontSize=20,
+        leading=26,
+        alignment=TA_LEFT,
+    )
+    style_firm_title = ParagraphStyle(
+        "FirmTitle",
+        fontName="Times-Bold",
+        fontSize=20,
+        leading=26,
+        alignment=TA_CENTER,
+    )
+    style_firm_body = ParagraphStyle(
+        "FirmBody",
+        fontName="Times-Roman",
+        fontSize=20,
+        leading=26,
+        alignment=TA_CENTER,
+    )
 
-  # Bumped size from 109 to 125 (~15% increase) for easier cutting
-  style_giant_foot = ParagraphStyle(
-      "GiantFoot",
-      fontName="Helvetica-Bold",
-      fontSize=125,
-      leading=132,
-      alignment=TA_CENTER,
-  )
+    style_giant_foot = ParagraphStyle(
+        "GiantFoot",
+        fontName="Helvetica-Bold",
+        fontSize=125,
+        leading=132,
+        alignment=TA_CENTER,
+    )
 
-  story = []
+    story = []
 
-  client_lines = [
-      line.strip() for line in clients_text.split("\n") if line.strip()
-  ]
-  contact_lines = [
-      line.strip() for line in contacts_text.split("\n") if line.strip()
-  ]
+    client_lines = [
+        line.strip() for line in clients_text.split("\n") if line.strip()
+    ]
+    contact_lines = [
+        line.strip() for line in contacts_text.split("\n") if line.strip()
+    ]
 
-  party_elements = []
-  if len(client_lines) > 0:
-    party_elements.append(Paragraph(client_lines[0], style_normal_20))
-  if len(contact_lines) > 0:
-    party_elements.append(Paragraph(contact_lines[0], style_normal_20))
+    party_elements = []
+    if len(client_lines) > 0:
+        party_elements.append(Paragraph(client_lines[0], style_normal_20))
+    if len(contact_lines) > 0:
+        party_elements.append(Paragraph(contact_lines[0], style_normal_20))
 
-  party_elements.append(Spacer(1, 14))
+    party_elements.append(Spacer(1, 14))
 
-  if len(client_lines) > 1:
-    party_elements.append(Paragraph(client_lines[1], style_normal_20))
-  if len(contact_lines) > 1:
-    party_elements.append(Paragraph(contact_lines[1], style_normal_20))
+    if len(client_lines) > 1:
+        party_elements.append(Paragraph(client_lines[1], style_normal_20))
+    if len(contact_lines) > 1:
+        party_elements.append(Paragraph(contact_lines[1], style_normal_20))
 
-  col_w_left = 1.333 * 72
-  col_w_right = 6.346 * 72
+    col_w_left = 1.333 * 72
+    col_w_right = 6.346 * 72
 
-  top_table = Table(
-      [["", party_elements]], colWidths=[col_w_left, col_w_right]
-  )
-  top_table.setStyle(
-      TableStyle([
-          ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
-          ("VALIGN", (0, 0), (-1, -1), "TOP"),
-          ("TOPPADDING", (0, 0), (-1, -1), 6),
-          ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-          ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
-          ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-      ])
-  )
-  story.append(top_table)
-  story.append(Spacer(1, 24))
+    top_table = Table(
+        [["", party_elements]], colWidths=[col_w_left, col_w_right]
+    )
+    top_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ])
+    )
+    story.append(top_table)
+    story.append(Spacer(1, 24))
 
-  story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
-  story.append(Spacer(1, 4))
-  story.append(
-      Paragraph(
-          "2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763",
-          style_firm_body,
-      )
-  )
-  story.append(Spacer(1, 4))
-  story.append(
-      Paragraph(
-          "TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092",
-          style_firm_body,
-      )
-  )
-  story.append(Spacer(1, 40))
+    story.append(Paragraph("21 CHAMBERS LLC", style_firm_title))
+    story.append(Spacer(1, 4))
+    story.append(
+        Paragraph(
+            "2 HAVELOCK ROAD #06-17<br/>HAVELOCK 2<br/>SINGAPORE 059763",
+            style_firm_body,
+        )
+    )
+    story.append(Spacer(1, 4))
+    story.append(
+        Paragraph(
+            "TEL: 6224 1848 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; FAX: 6223 3092",
+            style_firm_body,
+        )
+    )
+    story.append(Spacer(1, 40))
 
-  full_matter_name = "Uncontested Divorce"
-  if matter_type == "CD":
-    full_matter_name = "Contested Divorce"
-  elif matter_type == "Annulment":
-    full_matter_name = "Annulment"
-  elif matter_type == "Variation":
-    full_matter_name = "Variation"
-  elif matter_type == "Others":
-    full_matter_name = "Others"
+    full_matter_name = "Uncontested Divorce"
+    if matter_type == "CD":
+        full_matter_name = "Contested Divorce"
+    elif matter_type == "Annulment":
+        full_matter_name = "Annulment"
+    elif matter_type == "Variation":
+        full_matter_name = "Variation"
+    elif matter_type == "Others":
+        full_matter_name = "Others"
 
-  file_block_text = (
-      f"{matter_no}<br/>Opening date: {date_opened}<br/>Closure date:"
-  )
+    file_block_text = (
+        f"{matter_no}<br/>Opening date: {date_opened}<br/>Closure date:"
+    )
 
-  matrix_rows = [
-      [
-          Paragraph("SUBJECT<br/>MATTER", style_bold_20),
-          Paragraph(full_matter_name, style_normal_20),
-      ],
-      [
-          Paragraph("FILE", style_normal_20),
-          Paragraph(file_block_text, style_normal_20),
-      ],
-      [
-          Paragraph("Legal Fee", style_normal_20),
-          Paragraph("CASH", style_normal_20),
-      ],
-      [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)],
-  ]
+    matrix_rows = [
+        [
+            Paragraph("SUBJECT<br/>MATTER", style_bold_20),
+            Paragraph(full_matter_name, style_normal_20),
+        ],
+        [
+            Paragraph("FILE", style_normal_20),
+            Paragraph(file_block_text, style_normal_20),
+        ],
+        [
+            Paragraph("Legal Fee", style_normal_20),
+            Paragraph("CASH", style_normal_20),
+        ],
+        [Paragraph("Remarks", style_normal_20), Paragraph("", style_normal_20)],
+    ]
 
-  b_col1 = 1.596 * 72
-  b_col2 = 6.083 * 72
+    b_col1 = 1.596 * 72
+    b_col2 = 6.083 * 72
 
-  bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2])
-  bottom_table.setStyle(
-      TableStyle([
-          ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
-          ("VALIGN", (0, 0), (-1, -1), "TOP"),
-          ("TOPPADDING", (0, 0), (-1, -1), 6),
-          ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-          ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
-          ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-      ])
-  )
+    bottom_table = Table(matrix_rows, colWidths=[b_col1, b_col2])
+    bottom_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 1.5, colors.black),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7.2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ])
+    )
 
-  # LOCKED LAYOUT BLOCK: Nests bottom table and giant number with exact 2pt (2px visual equivalent) spacing
-  locked_block_table = Table(
-      [[bottom_table], [Paragraph(matter_no, style_giant_foot)]],
-      colWidths=[7.942 * 72],
-  )
-  locked_block_table.setStyle(
-      TableStyle([
-          ("VALIGN", (0, 0), (-1, -1), "TOP"),
-          ("TOPPADDING", (0, 0), (0, 0), 0),
-          ("BOTTOMPADDING", (0, 0), (0, 0), 2),  # Exactly 2pt gap below table
-          ("TOPPADDING", (0, 1), (0, 1), 2),
-          ("BOTTOMPADDING", (0, 1), (0, 1), 0),
-          ("LEFTPADDING", (0, 0), (-1, -1), 0),
-          ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-      ])
-  )
+    locked_block_table = Table(
+        [[bottom_table], [Paragraph(matter_no, style_giant_foot)]],
+        colWidths=[7.942 * 72],
+    )
+    locked_block_table.setStyle(
+        TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (0, 0), 0),
+            ("BOTTOMPADDING", (0, 0), (0, 0), 2),
+            ("TOPPADDING", (0, 1), (0, 1), 2),
+            ("BOTTOMPADDING", (0, 1), (0, 1), 0),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ])
+    )
 
-  story.append(locked_block_table)
+    story.append(locked_block_table)
 
-  doc.build(story)
-  buffer.seek(0)
-  return buffer.getvalue()
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 # --- 3. DOCX PARSER ENGINE ---
@@ -504,6 +502,7 @@ def render_pdf_preview(pdf_bytes):
         image = page.render(scale=2).to_pil()
         st.image(image, caption=f"Page {i + 1}", use_container_width=True)
 
+
 def sync_closed_cartons_from_cloud(db_path):
     """Pulls all closed carton_sync/*.json files from the repo and
     ingests any new or updated matters into the archive."""
@@ -511,13 +510,11 @@ def sync_closed_cartons_from_cloud(db_path):
     conn = sqlite3.connect(db_path, timeout=10)
     cur = conn.cursor()
     
-    # Load already ingested cartons and their last_updated stamps
     already = {}
     try:
         for row in cur.execute("SELECT carton_no, last_updated FROM ingested_cartons"):
             already[row[0]] = row[1] or ""
     except sqlite3.OperationalError:
-        # Fallback if table structure is old
         cur.execute("""CREATE TABLE IF NOT EXISTS ingested_cartons (
             carton_no TEXT PRIMARY KEY,
             ingested_at TEXT,
@@ -533,7 +530,6 @@ def sync_closed_cartons_from_cloud(db_path):
         c_no = data.get("carton_no", "UNKNOWN")
         cloud_updated = data.get("last_updated", "")
         
-        # Skip only if it's already ingested AND the timestamp hasn't changed
         if c_no in already and already[c_no] == cloud_updated:
             continue
             
@@ -845,7 +841,6 @@ with tab_crown:
     with open("scanner_ui.html", "r", encoding="utf-8") as f:
         html_content = f.read()
 
-    # Inject secrets securely from Streamlit to the HTML frontend template
     gh_token = st.secrets.get("github_token", "")
     gh_repo = st.secrets.get("github_repo", "zulfikrycheong/21C-Automation")
 
@@ -879,7 +874,6 @@ with tab_locator:
             last_updated TEXT
         )""")
 
-        # Remove pre-existing duplicate (carton_no, file_no) rows, keeping the earliest one
         conn.execute("""
             DELETE FROM archive_records
             WHERE id NOT IN (
@@ -908,7 +902,6 @@ with tab_locator:
             st.success(f"Indexed {len(newly)} new carton(s)." if newly else "Nothing new to index.")
             st.rerun()
 
-        # Top Metrics Bar & Database Export Tool (Cloud Safeguard)
         col_metrics, col_download = st.columns([3, 1])
 
         try:
@@ -944,7 +937,6 @@ with tab_locator:
         except Exception as e:
             st.warning(f"Metadata read error: {e}")
 
-        # Ingestion Chute for Newly Exported Cartons
         with st.expander("📥 Ingest Newly Exported Carton (.docx)", expanded=False):
             st.caption("Drop any newly exported Crown Box Record (`.docx`) here to permanently index its files into the search catalog with duplicate protection.")
             new_box_file = st.file_uploader("Upload exported carton .docx", type=["docx"], key="ingest_box_uploader")
@@ -963,7 +955,6 @@ with tab_locator:
                         conn = sqlite3.connect(db_path, timeout=10)
                         cur = conn.cursor()
                         
-                        # Ensure unique constraint exists to block duplicates safely
                         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_carton_file ON archive_records(carton_no, file_no)")
 
                         for t in doc.tables:
@@ -997,7 +988,6 @@ with tab_locator:
 
         st.markdown("---")
 
-        # Search Bar & Filter Controls
         search_col, filter_col = st.columns([3, 1])
         with search_col:
             search_query = st.text_input(
