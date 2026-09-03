@@ -84,14 +84,11 @@
 </head>
 <body>
 
-  <div id="fileQueueContainer"></div>
-</div>
-
 <div class="btn-row" style="margin-top: 10px;">
   <button class="btn btn-secondary" onclick="cloudPull()">🔄 Pull Carton</button>
   <button class="btn btn-primary" onclick="cloudPush()">🚀 Push Carton</button>
 </div>
-  
+
 <div class="card">
   <label class="form-label">Carton Number (Box Identifier)</label>
   <input type="text" id="cartonNumberInput" class="form-control" placeholder="e.g. YYLEE – 21C - 282- YX" oninput="saveCartonState()">
@@ -133,14 +130,17 @@
   <canvas id="snapshotCanvas" style="display:none"></canvas>
 </div>
 
-<div class="queue-header">
-    <div class="queue-count" id="queueCount">0 Files in Active Box</div>
-    <div style="display: flex; gap: 8px; align-items: center;">
-        <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="generateWordDoc()">Export .docx</button>
-        <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="closeCartonAndSync()">✅ Close Carton</button>
-    </div>
+<div class="card">
+  <div class="queue-header">
+      <div class="queue-count" id="queueCount">0 Files in Active Box</div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="generateWordDoc()">Export .docx</button>
+          <button class="btn btn-success" style="padding: 8px 14px; font-size: 0.85rem;" onclick="closeCartonAndSync()">✅ Close Carton</button>
+      </div>
+  </div>
+  <div id="fileQueueContainer"></div>
 </div>
-
+  
 <!-- Edit Modal -->
 <div class="modal-backdrop" id="editModal">
   <div class="modal-card">
