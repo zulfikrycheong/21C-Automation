@@ -24,7 +24,7 @@ def pull_active_session():
   """Pulls the latest scanning queue state from the repo JSON file."""
   token, repo = get_sync_credentials()
   if not token or not repo:
-    return None
+    return None, None  # <-- Fixed: returns two values so unpacking never crashes
 
   url = f"{GITHUB_API_URL}/{repo}/contents/carton_sync.json"
   headers = {
