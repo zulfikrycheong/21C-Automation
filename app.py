@@ -811,16 +811,15 @@ with tab_crown:
 
                     # Inject directly into localStorage AND force a clean state reload
                     components.html(
-                        f"""
-                        <script>
-                          localStorage.setItem('chambersos_active_queue', {json.dumps(queue_json)});
-                          localStorage.setItem('chambersos_active_carton', {json.dumps(carton_val)});
-                          console.log("Forced cloud sync into localStorage:", {json.dumps(queue_json)});
-                          window.parent.location.reload();
-                        </script>
-                        """,
-                        height=0,
-                    )
+    f"""
+    <script>
+      localStorage.setItem('chambersos_active_queue', {json.dumps(queue_json)});
+      localStorage.setItem('chambersos_active_carton', {json.dumps(carton_val)});
+      window.parent.location.reload();
+    </script>
+    """,
+    height=0,
+)
 
                     st.toast(f"Pulled {len(pulled_queue)} items from cloud and synced terminal!", icon="📡")
                     st.rerun()
