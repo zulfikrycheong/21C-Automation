@@ -853,20 +853,23 @@ with tab_locator:
             "⚠️ `crown_base.db` not found in repository root. Place your compiled database file in the project folder."
         )
     else:
-        conn = sqlite3.connect(db_path, timeout=10)
-        dupes = conn.execute("""
-            SELECT carton_no, file_no, COUNT(*) as cnt
-            FROM archive_records
-            GROUP BY carton_no, file_no
-            HAVING cnt > 1
-        """).fetchall()
-        if dupes:
-            st.warning(f"⚠️ Found {len(dupes)} duplicate carton/file combos blocking the index. See below.")
-            st.dataframe(dupes)
+                conn = sqlite3.connect(db_path, timeout=10)
         conn.execute("""CREATE TABLE IF NOT EXISTS ingested_cartons (
             carton_no TEXT PRIMARY KEY,
             ingested_at TEXT
         )""")
+
+        # Remove pre-existing duplicate (carton_no, file_no) rows, keeping the earliest one
+        conn.execute("""
+            DELETE FROM archive_records
+            WHERE id NOT IN (
+                SELECT MIN(id)
+                FROM archive_records
+                GROUP BY carton_no, file_no
+            )
+        """)
+        conn.commit()
+
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_carton_file ON archive_records(carton_no, file_no)")
         conn.commit()
         conn.close()
