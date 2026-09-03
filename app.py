@@ -853,7 +853,8 @@ with tab_locator:
             "⚠️ `crown_base.db` not found in repository root. Place your compiled database file in the project folder."
         )
     else:
-                conn = sqlite3.connect(db_path, timeout=10)
+                    else:
+        conn = sqlite3.connect(db_path, timeout=10)
         conn.execute("""CREATE TABLE IF NOT EXISTS ingested_cartons (
             carton_no TEXT PRIMARY KEY,
             ingested_at TEXT
