@@ -808,17 +808,13 @@ with tab_crown:
           st.warning("Could not reach sync channel.")
   
   st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
-          
-import textwrap
 
-crown_scanner_component = textwrap.dedent("""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-    ...
-    </head>
-    </html>
-""")
+# Load the Crown Scanner frontend cleanly without indentation errors
+with open("scanner_ui.html", "r", encoding="utf-8") as f:
+  crown_scanner_component = f.read()
+
+components.html(crown_scanner_component, height=1050, scrolling=True)
+    
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
