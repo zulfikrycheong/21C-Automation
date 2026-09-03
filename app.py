@@ -608,7 +608,7 @@ tab_intake, tab_crown, tab_locator = st.tabs([
 ])
 
 # ==============================================================================
-# WING 1: INTAKE PIPELINE & COVER GENERATOR
+# WING 1: INTAKE PIPELINE, COVER GENERATOR & QUICK CLOSURE STAMP
 # ==============================================================================
 with tab_intake:
     st.markdown(
@@ -832,6 +832,74 @@ with tab_intake:
                 type="primary",
             )
 
+    # --- QUICK FILE CLOSURE & ARCHIVE STAMP EXTENSION ---
+    st.markdown("---")
+    with st.expander("⚡ Quick File Closure & Archive Stamp", expanded=False):
+        st.caption("Search across all monthly tabs for a File Number or Client Name and auto-stamp today's date into the Closed Date column.")
+        
+        with st.form("quick_closure_form"):
+            closure_query = st.text_input("File Number or Client Name Search", placeholder="e.g. 20260235 or JOHN DOE")
+            closure_date_input = st.text_input("Closure Date to Stamp", value=datetime.now().strftime("%d/%m/%Y"))
+            stamp_submitted = st.form_submit_button("🏷️ Locate & Stamp Closed Date", use_container_width=True)
+
+        if stamp_submitted and closure_query.strip():
+            with st.spinner("Scanning all monthly sheets across the workbook..."):
+                try:
+                    scopes = [
+                        "https://www.googleapis.com/auth/spreadsheets",
+                        "https://www.googleapis.com/auth/drive",
+                    ]
+                    if os.path.exists("credentials.json"):
+                        creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+                    else:
+                        encoded_str = st.secrets["encoded_creds"]
+                        decoded_bytes = base64.b64decode(encoded_str)
+                        creds_dict = json.loads(decoded_bytes)
+                        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+
+                    client = gspread.authorize(creds)
+                    workbook = client.open(GOOGLE_SHEET_NAME)
+                    
+                    q_clean = closure_query.strip().lower()
+                    found_match = False
+                    
+                    # Search across all worksheets in the workbook
+                    for ws in workbook.worksheets():
+                        if ws.title.lower() == "template" or ws.title.lower() == "summary":
+                            continue
+                        
+                        records = ws.get_all_records()
+                        if not records:
+                            continue
+                        
+                        headers = ws.row_values(1)
+                        # Find the exact column index for "Closed Date" dynamically
+                        closed_col_idx = None
+                        for idx, h_name in enumerate(headers):
+                            if "closed date" in h_name.lower():
+                                closed_col_idx = idx + 1 # 1-indexed for gspread
+                                break
+                        
+                        if not closed_col_idx:
+                            continue
+                        
+                        # Search rows for match in File No (Col C / index 3) or Client Name (Col E / index 5)
+                        for r_idx, row_vals in enumerate(ws.get_all_values()[1:], start=2):
+                            row_text = " ".join(str(v).lower() for v in row_vals)
+                            if q_clean in row_text:
+                                # Found the row! Update the Closed Date column cell
+                                ws.update_cell(r_idx, closed_col_idx, closure_date_input)
+                                found_match = True
+                                st.success(f"Successfully stamped **{closure_date_input}** on tab **{ws.title}** (Row {r_idx}) for match: `{closure_query}`")
+                                break
+                        if found_match:
+                            break
+                    
+                    if not found_match:
+                        st.warning(f"Could not find any matching record for '{closure_query}' across the monthly worksheets.")
+                except Exception as e:
+                    st.error(f"Error during closure stamping: {e}")
+                    
 # ==============================================================================
 # WING 2: CROWN BOX ARCHIVAL TERMINAL (Frontend Direct Sync Bridge)
 # ==============================================================================
