@@ -810,7 +810,7 @@ with tab_crown:
   st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
           
 crown_scanner_component = ""
-    <!DOCTYPE html>
+<!DOCTYPE html>
     <html lang="en">
     <head>
     <meta charset="UTF-8">
