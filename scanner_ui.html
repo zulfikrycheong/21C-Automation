@@ -87,6 +87,11 @@
   <div id="fileQueueContainer"></div>
 </div>
 
+<div class="btn-row" style="margin-top: 10px;">
+  <button class="btn btn-secondary" onclick="cloudPull()">🔄 Pull Carton</button>
+  <button class="btn btn-primary" onclick="cloudPush()">🚀 Push Carton</button>
+</div>
+  
 <div class="card">
   <label class="form-label">Carton Number (Box Identifier)</label>
   <input type="text" id="cartonNumberInput" class="form-control" placeholder="e.g. YYLEE – 21C - 282- YX" oninput="saveCartonState()">
@@ -671,93 +676,94 @@
     }
   }
 
-  // --- GBA WIRELESS ADAPTER FRONTEND SYNC BRIDGE ---
-  const GH_TOKEN = "__GH_TOKEN__";
-  const GH_REPO = "__GH_REPO__";
-  const GH_API_URL = `https://api.github.com/repos/${GH_REPO}/contents/carton_sync.json`;
+// --- GBA WIRELESS ADAPTER SYNC (per-carton file, merge-not-overwrite) ---
+const GH_TOKEN = "__GH_TOKEN__";
+const GH_REPO = "__GH_REPO__";
 
-  async function cloudPush() {
-    const cartonNo = document.getElementById('cartonNumberInput').value || "YYLEE-BOX-01";
-    const dept = document.getElementById('departmentSelect').value;
-    const payload = {
-      carton_no: cartonNo,
-      department: dept,
-      queue: fileQueue,
-      last_updated: new Date().toISOString()
-    };
+function syncPath(cartonNo) {
+  const safe = (cartonNo || "UNASSIGNED").trim().replace(/[^A-Za-z0-9_\-]/g, "_");
+  return `carton_sync/${safe}.json`;
+}
 
+async function ghGetFile(path) {
+  const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${path}`, {
+    headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github+json" }
+  });
+  if (res.status === 404) return { data: null, sha: null };
+  if (!res.ok) throw new Error(`GitHub GET failed: ${res.status}`);
+  const json = await res.json();
+  const decoded = decodeURIComponent(escape(atob(json.content)));
+  return { data: JSON.parse(decoded), sha: json.sha };
+}
+
+async function ghPutFile(path, dataObj, sha) {
+  const jsonStr = JSON.stringify(dataObj, null, 2);
+  const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+  const body = {
+    message: `Sync ${path} (${dataObj.queue.length} items) @ ${new Date().toISOString()}`,
+    content: encoded,
+  };
+  if (sha) body.sha = sha;
+  return fetch(`https://api.github.com/repos/${GH_REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${GH_TOKEN}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+function mergeQueues(remoteQueue, localQueue) {
+  const byKey = new Map();
+  (remoteQueue || []).forEach(item => byKey.set(item.line1, item));
+  (localQueue || []).forEach(item => byKey.set(item.line1, item)); // local wins
+  return Array.from(byKey.values());
+}
+
+async function cloudPush() {
+  const cartonNo = document.getElementById('cartonNumberInput').value.trim() || "YYLEE-BOX-01";
+  const dept = document.getElementById('departmentSelect').value;
+  const path = syncPath(cartonNo);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      let sha = null;
-      const getRes = await fetch(GH_API_URL, {
-        headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github+json" }
-      });
-      if (getRes.ok) {
-        const fileData = await getRes.json();
-        sha = fileData.sha;
-      }
+      const { data: remote, sha } = await ghGetFile(path);
+      const merged = mergeQueues(remote ? remote.queue : [], fileQueue);
+      const payload = { carton_no: cartonNo, department: dept, queue: merged, last_updated: new Date().toISOString() };
+      const res = await ghPutFile(path, payload, sha);
 
-      const jsonStr = JSON.stringify(payload, null, 2);
-      const encodedContent = btoa(unescape(encodeURIComponent(jsonStr)));
-      
-      const bodyData = {
-        message: `Sync active carton session: ${cartonNo} (${fileQueue.length} items)`,
-        content: encodedContent
-      };
-      if (sha) bodyData.sha = sha;
+      if (res.status === 409) continue; 
+      if (!res.ok) { alert("Cloud push failed: " + await res.text()); return; }
 
-      const putRes = await fetch(GH_API_URL, {
-        method: "PUT",
-        headers: { 
-          "Authorization": `Bearer ${GH_TOKEN}`, 
-          "Accept": "application/vnd.github+json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(bodyData)
-      });
-
-      if (putRes.ok) {
-        alert("Successfully pushed active box queue to cloud! 🚀");
-      } else {
-        const err = await putRes.text();
-        alert("Cloud push failed: " + err);
-      }
+      fileQueue = merged;
+      renderQueue(); updateCapacityDisplay(); saveCartonState();
+      alert(`Synced — ${merged.length} total files in ${cartonNo} (merged with cloud). 🚀`);
+      return;
     } catch (e) {
-      alert("Push error: " + e.message);
+      alert("Push error: " + e.message); return;
     }
   }
+  alert("Push failed after retries — someone else is syncing this carton right now. Try again in a moment.");
+}
 
-  async function cloudPull() {
-    try {
-      const res = await fetch(GH_API_URL, {
-        headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github+json" }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const decoded = decodeURIComponent(escape(atob(data.content)));
-        const parsed = JSON.parse(decoded);
-
-        if (parsed.queue) {
-          fileQueue = parsed.queue;
-          if (parsed.carton_no) {
-            document.getElementById('cartonNumberInput').value = parsed.carton_no;
-          }
-          if (parsed.department) {
-            document.getElementById('departmentSelect').value = parsed.department;
-            changeDepartment();
-          }
-          renderQueue();
-          updateCapacityDisplay();
-          saveCartonState();
-          alert(`Successfully pulled ${fileQueue.length} items from cloud! 📡`);
-        }
-      } else {
-        alert("Could not fetch cloud data.");
-      }
-    } catch (e) {
-      alert("Pull error: " + e.message);
-    }
+async function cloudPull() {
+  const cartonNo = document.getElementById('cartonNumberInput').value.trim() || "YYLEE-BOX-01";
+  try {
+    const { data: remote } = await ghGetFile(syncPath(cartonNo));
+    if (!remote) { alert("No cloud record yet for " + cartonNo); return; }
+    fileQueue = mergeQueues(remote.queue, fileQueue); 
+    if (remote.department) { document.getElementById('departmentSelect').value = remote.department; changeDepartment(); }
+    renderQueue(); updateCapacityDisplay(); saveCartonState();
+    alert(`Pulled — ${fileQueue.length} total files in ${cartonNo}. 📡`);
+  } catch (e) {
+    alert("Pull error: " + e.message);
   }
+}
+
+// Auto-pull when carton number changes
+document.getElementById('cartonNumberInput').addEventListener('change', cloudPull);
   
 </script>
 </body>
