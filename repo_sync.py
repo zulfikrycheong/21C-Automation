@@ -82,3 +82,34 @@ def push_active_session(carton_no, department, queue):
   except Exception as e:
     print(f"Sync push error: {e}")
     return False
+
+def list_carton_sync_files():
+    """Lists all carton_sync/*.json files currently in the repo."""
+    token, repo = get_sync_credentials()
+    if not token or not repo:
+        return []
+    url = f"{GITHUB_API_URL}/{repo}/contents/carton_sync"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    try:
+        res = requests.get(url, headers=headers, timeout=5)
+        if res.status_code == 200:
+            return [item["path"] for item in res.json() if item["name"].endswith(".json")]
+    except Exception as e:
+        print(f"List sync files error: {e}")
+    return []
+
+def fetch_carton_file(path):
+    token, repo = get_sync_credentials()
+    if not token or not repo:
+        return None
+    url = f"{GITHUB_API_URL}/{repo}/contents/{path}"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    try:
+        res = requests.get(url, headers=headers, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            decoded = base64.b64decode(data["content"]).decode("utf-8")
+            return json.loads(decoded)
+    except Exception as e:
+        print(f"Fetch carton file error: {e}")
+    return None
