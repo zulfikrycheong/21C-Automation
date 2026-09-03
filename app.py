@@ -794,11 +794,43 @@ with tab_crown:
           " mobile and desktop terminals in real-time.</span>",
           unsafe_allow_html=True,
       )
-    if st.button("🚀 Push", use_container_width=True, key="push_cloud_btn"):
-        # Pulls current carton state from session or component input
+        
+    with col_sync2:
+      if st.button(
+          "🔄 Pull", use_container_width=True, key="pull_cloud_btn"
+      ):
+        cloud_data, _ = repo_sync.pull_active_session()
+        if cloud_data:
+          st.session_state["cloud_synced_queue"] = cloud_data.get("queue", [])
+          st.session_state["cloud_carton_no"] = cloud_data.get("carton_no", "")
+
+          queue_json = json.dumps(cloud_data.get("queue", []))
+          carton_val = cloud_data.get("carton_no", "")
+
+          components.html(
+              f"""
+            <script>
+              localStorage.setItem('chambersos_active_queue', '{queue_json}');
+              localStorage.setItem('chambersos_active_carton', '{carton_val}');
+              window.parent.location.reload();
+            </script>
+          """,
+              height=0,
+          )
+
+          st.toast(
+              "Synced latest queue from cloud and updated terminal!", icon="📡"
+          )
+          st.rerun()
+        else:
+          st.warning("Could not reach sync channel.")
+
+      if st.button(
+          "🚀 Push", use_container_width=True, key="push_cloud_btn"
+      ):
         carton_val = st.session_state.get("cloud_carton_no", "YYLEE-BOX-01")
         current_queue = st.session_state.get("cloud_synced_queue", [])
-        
+
         success = repo_sync.push_active_session(
             carton_no=carton_val,
             department="CONVEYANCING",
@@ -808,24 +840,6 @@ with tab_crown:
           st.toast("Active box queue broadcasted to cloud!", icon="🚀")
         else:
           st.warning("Cloud push failed. Check network or token limits.")
-
-      if st.button("🚀 Test Push Sample Data", use_container_width=True):
-        test_queue = [{
-            "line1": "20260999",
-            "line2": "TEST CLIENT",
-            "line3": "Purchase",
-            "line4": "Test Address",
-        }]
-        success = repo_sync.push_active_session(
-            carton_no="YYLEE-TEST-BOX",
-            department="CONVEYANCING",
-            queue=test_queue,
-        )
-        if success:
-          st.toast("Test data pushed to GitHub!", icon="🚀")
-          st.rerun()
-            
-  st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
 
   # --- INDENTED INSIDE tab_crown SO IT STAYS IN ITS OWN WING ---
   with open("scanner_ui.html", "r", encoding="utf-8") as f:
