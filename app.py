@@ -799,27 +799,33 @@ with tab_crown:
             if st.button("🔄 Pull", use_container_width=True, key="pull_cloud_btn"):
                 cloud_data, _ = repo_sync.pull_active_session()
                 if cloud_data:
-                    st.session_state["cloud_synced_queue"] = cloud_data.get("queue", [])
-                    st.session_state["cloud_carton_no"] = cloud_data.get("carton_no", "")
+                    pulled_queue = cloud_data.get("queue", [])
+                    pulled_carton = cloud_data.get("carton_no", "YYLEE-BOX-01")
+                    
+                    st.session_state["cloud_synced_queue"] = pulled_queue
+                    st.session_state["cloud_carton_no"] = pulled_carton
 
-                    queue_json = json.dumps(cloud_data.get("queue", []))
-                    carton_val = cloud_data.get("carton_no", "")
+                    # Serialize to JSON strings safely for script injection
+                    queue_json = json.dumps(pulled_queue)
+                    carton_val = json.dumps(pulled_carton)
 
+                    # Inject directly into localStorage AND force a clean state reload
                     components.html(
                         f"""
                         <script>
-                          localStorage.setItem('chambersos_active_queue', '{queue_json}');
-                          localStorage.setItem('chambersos_active_carton', '{carton_val}');
+                          localStorage.setItem('chambersos_active_queue', {json.dumps(queue_json)});
+                          localStorage.setItem('chambersos_active_carton', {json.dumps(carton_val)});
+                          console.log("Forced cloud sync into localStorage:", {json.dumps(queue_json)});
                           window.parent.location.reload();
                         </script>
                         """,
                         height=0,
                     )
 
-                    st.toast("Synced latest queue from cloud and updated terminal!", icon="📡")
+                    st.toast(f"Pulled {len(pulled_queue)} items from cloud and synced terminal!", icon="📡")
                     st.rerun()
                 else:
-                    st.warning("Could not reach sync channel.")
+                    st.warning("Could not reach sync channel or carton_sync.json is empty.")
 
             if st.button("🚀 Push", use_container_width=True, key="push_cloud_btn"):
                 carton_val = st.session_state.get("cloud_carton_no", "YYLEE-BOX-01")
